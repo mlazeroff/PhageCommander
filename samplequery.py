@@ -41,6 +41,8 @@ if __name__ == '__main__':
             input_file_data += current_byte
             current_byte = input_file.read(1)
 
+    input_file_name = 'Diane complete'
+
     # File creation for post requests
     file_info = {'file': ('Diane complete.fasta', input_file_data, 'application/octet-stream')}
 
@@ -69,7 +71,7 @@ if __name__ == '__main__':
         raise
 
     # write gm response to file
-    gm_output = open('dianeGm.txt', 'wb')
+    gm_output = open(input_file_name + '.gm', 'wb')
     getGMFile = requests.get(FILE_DOMAIN + file_location)
     getGMFile.raise_for_status()
     gm_output.write(getGMFile.content)
@@ -101,10 +103,10 @@ if __name__ == '__main__':
         raise
 
     # write response to file
-    gmhmmp = open('dianeHmmp.txt', 'wb')
+    gmhmm_output = open(input_file_name + '.gmhmm', 'wb')
     getHmmFile = requests.get(FILE_DOMAIN + file_location)
     getHmmFile.raise_for_status()
-    gmhmmp.write(getHmmFile.content)
+    gmhmm_output.write(getHmmFile.content)
     # End GeneMark Hmm Lookup --------------------------------------------------
 
     # Begin GeneMarkS Lookup ---------------------------------------------------
@@ -131,7 +133,7 @@ if __name__ == '__main__':
         raise
 
     # write response to file
-    gms_output = open('dianeGms.txt', 'wb')
+    gms_output = open(input_file_name + '.gms', 'wb')
     getGmsFile = requests.get(FILE_DOMAIN + file_location)
     getGmsFile.raise_for_status()
     gms_output.write(getGmsFile.content)
