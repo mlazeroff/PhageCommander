@@ -31,6 +31,7 @@ if __name__ == '__main__':
     GM_HMM_DOMAIN = 'http://exon.gatech.edu/GeneMark/gmhmmp.cgi'
     GMS_DOMAIN = 'http://exon.gatech.edu/GeneMark/genemarks.cgi'
     HEURISTIC_DOMAIN = 'http://exon.gatech.edu/GeneMark/heuristic_gmhmmp.cgi'
+    GMS2_DOMAIN = 'http://exon.gatech.edu/GeneMark/genemarks2.cgi'
 
     # Load DNA Sequence into memory
     input_file_data = b''
@@ -168,4 +169,34 @@ if __name__ == '__main__':
     getHeuristicFile = requests.get(FILE_DOMAIN + file_location)
     getHeuristicFile.raise_for_status()
     heuristic_output.write(getHeuristicFile.content)
-    # End GeneMark Heuristic Lookup
+    # End GeneMark Heuristic Lookup -------------------------------------------
+
+    # Begin GeneMarkS2 Lookup -------------------------------------------------
+    gmms2_data = {'sequence': '', 'submit': 'GeneMarkS-2', 'mode': 'auto', 'format': 'lst',
+                  'email': '', 'subject': 'GeneMarkS-2', 'gcode': 11}
+
+    # GeneMarkS2 Post Request
+    gmms2_post_request = requests.post(GMS2_DOMAIN, files=file_info, data=gmms2_data)
+    gmms2_post_request.raise_for_status()
+    soup = BeautifulSoup(gmms2_post_request.text, 'html.parser')
+
+    # Get URL for GMS2 output
+    file_location = ''
+    for a in soup.find_all('a', href=True):
+        if 'tmp' in a['href']:
+            file_location = a['href']
+            break
+
+    # if tmp not available, change in response format or invalid post
+    try:
+        if file_location == '':
+            raise GeneMarkError("GeneMarkS2")
+    except GeneMarkError:
+        raise
+
+    # write response to file
+    gms2_output = open(input_file_name + '.gms2', 'wb')
+    getGMS2File = requests.get(FILE_DOMAIN + file_location)
+    getGMS2File.raise_for_status()
+    gms2_output.write(getGMS2File.content)
+    # End GeneMarkS2 Lookup --------------------------------------------------
