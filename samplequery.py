@@ -4,6 +4,7 @@ Author: Matthew Lazeroff
 """
 
 import requests
+import threading
 from bs4 import BeautifulSoup
 
 # Genemark Domains
@@ -35,6 +36,7 @@ class GeneFile:
     """
     Class for querying GeneMark tools for a DNA sequence
     """
+
     def __init__(self, sequence_file):
         """
         Constructor
@@ -236,18 +238,28 @@ class GeneFile:
         """
         Query: GeneMark, GeneMarkHmm, GeneMarkS, GeneMarkS2, and GeneMark Heuristic
         """
-        self.genemark_query()
-        self.genemarkhmm_query()
-        self.genemarks_query()
-        self.genemarks2_query()
-        self.genemark_heuristic_query()
+        # Methods to query
+        queries = [self.genemark_query, self.genemarkhmm_query, self.genemarks_query, self.genemarks2_query,
+                   self.genemark_heuristic_query]
 
+        # Thread pool
+        threads = []
 
+        # Allocate threads
+        for query in queries:
+            threads.append(threading.Thread(target=query))
+
+        # Start Threads
+        for thread in threads:
+            thread.start()
+
+        # Join Threads
+        for thread in threads:
+            thread.join()
 
 
 if __name__ == '__main__':
-    file = 'D:\mdlaz\Documents\college\Research\PhageProject_Sept2018\GeneSequences\Diane complete.fasta'
-
+    file = 'data/Diane complete.fasta'
     # Create GeneFile from sequence file and query
     sequence = GeneFile(file)
     sequence.query_all()
