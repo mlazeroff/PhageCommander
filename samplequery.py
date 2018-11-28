@@ -32,6 +32,9 @@ class GeneMarkError(Error):
 
 
 class GeneFile:
+    """
+    Class for querying GeneMark tools for a DNA sequence
+    """
     def __init__(self, sequence_file):
         """
         Constructor
@@ -88,6 +91,10 @@ class GeneFile:
         # End GeneMark Lookup -------------------------------------------------------
 
     def genemarkhmm_query(self):
+        """
+        Query GeneMark Hmm
+        :return:
+        """
         # Begin GeneMark Hmm Lookup -------------------------------------------------
         gm_hmm_data = {'sequence': '', 'org': 'Escherichia_coli_K_12_substr__MG1655',
                        'submit': 'Start GeneMark.hmm', 'format': 'LST',
@@ -121,6 +128,9 @@ class GeneFile:
         # End GeneMark Hmm Lookup --------------------------------------------------
 
     def genemarks_query(self):
+        """
+        Query GeneMark S
+        """
         # Begin GeneMarkS Lookup ---------------------------------------------------
         gms_data = {'sequence': '', 'submit': 'Start GeneMarkS', 'mode': 'prok', 'format': 'LST',
                     'subject': 'GeneMarkS', 'gcode': 11}
