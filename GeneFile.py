@@ -316,6 +316,30 @@ class Gene:
             raise
         self.length = int(length)
 
+    def __eq__(self, other):
+        """
+        Checks if Genes can possibly represent the same Gene
+        For + direction, True is stop codons are same
+        For - direction, True if start codons are same
+        :param other: Gene object
+        :return: True / False
+        """
+        try:
+            if isinstance(other, Gene):
+                if self.direction == other.direction:
+                    if self.direction == '+':
+                        if self.stop == other.stop:
+                            return True
+                    else: # - direction
+                        if self.start == other.start:
+                            return True
+            else:
+                raise GeneError("Gene Eq: Comparing object must be of Gene type")
+        except GeneError:
+            raise
+
+        return False
+
     def __str__(self):
         """
         Overload of str() for printing
@@ -494,6 +518,7 @@ if __name__ == '__main__':
     my_file = 'D:\mdlaz\Documents\college\Research\PhageProject_Sept2018\GeneSequences\Diane complete.fasta'
     # Create GeneFile from sequence file and query
     sequence = GeneFile(my_file)
-    files = sequence.query_all()
 
-
+    g1 = Gene(5, 2011, '-', 15)
+    g2 = Gene(5, 2001, '-', 15)
+    print(g1 == 'r')
