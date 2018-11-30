@@ -258,7 +258,8 @@ class GeneFile:
         Query: GeneMark, GeneMarkHmm, GeneMarkS, GeneMarkS2, and GeneMark Heuristic
         """
         # Methods to query
-        queries = [self.genemark_query, self.genemarkhmm_query, self.genemarks_query, self.genemarks2_query,
+        queries = [self.genemark_query, self.genemarkhmm_query, self.genemarks_query,
+                   self.genemarks2_query,
                    self.genemark_heuristic_query]
 
         # Thread pool
@@ -277,9 +278,213 @@ class GeneFile:
             thread.join()
 
 
-if __name__ == '__main__':
-    file = 'D:\mdlaz\Documents\college\Research\PhageProject_Sept2018\GeneSequences\Diane complete.fasta'
-    # Create GeneFile from sequence file and query
-    sequence = GeneFile(file)
-    sequence.genemarks2_query(out='s2.txt')
+class GeneError(Error):
+    def __init__(self, message):
+        self.message = message
 
+
+class Gene:
+    """
+    Class for representing a potential gene encoding
+    """
+
+    def __init__(self, start, stop, direction, length):
+        """
+        Constructor
+        :param start:  start codon (int)
+        :param stop:   end codon (int)
+        :param direction: +/-
+        :param length: length of gene (int)
+        """
+        self.start = int(start)
+        self.stop = int(stop)
+        # check for proper direction
+        try:
+            if direction != '+' and direction != '-':
+                raise GeneError("Direction must be + or -")
+            else:
+                self.direction = direction
+        except GeneError:
+            raise
+        self.length = int(length)
+
+    def __str__(self):
+        """
+        Overload of str() for printing
+        :return: String containing gene information
+        """
+        return 'Direction: {} Start: {} Stop: {} Length: {}'.format(self.direction,
+                                                                    self.start,
+                                                                    self.stop,
+                                                                    self.length)
+
+
+class GeneParse:
+    """
+    Class for parsing GeneMark output files
+    All methods are static
+    """
+
+    @staticmethod
+    def parse_genemark(gm_file):
+        file = open(gm_file, 'r')
+
+        # Skip until Regions of Interests
+        curr_line = file.readline()
+        while (' LEnd      REnd    Strand      Frame' not in curr_line):
+            curr_line = file.readline()
+
+        # read blank line
+        curr_line = file.readlines(2)
+
+        # Get gene data
+        curr_line = file.readline()
+        genes = []
+        while curr_line != '\n':
+            data = [x for x in curr_line.strip().split(' ') if x != '']
+            # check gene orientation
+            if data[2] == 'direct':
+                direction = '+'
+            else:
+                direction = '-'
+            # get gene length
+            length = int(data[1]) - int(data[0]) + 1
+            # add to list
+            genes.append(Gene(data[0], data[1], direction, length))
+            curr_line = file.readline()
+
+        return genes
+
+    @staticmethod
+    def parse_genemarkS(s_file):
+        """
+        Parse GeneMarkS file for Gene data
+        :param s_file: GeneMarkS file
+        :return: list of Gene objects in file order
+        """
+        file = open(s_file, 'r')
+
+        # begin parse
+        current_line = file.readline()
+        # Check if proper GeneMark file
+        try:
+            if 'GeneMark.hmm' not in current_line:
+                raise GeneError("Hmm: Not a valid GeneMark Hmm file")
+        except GeneError:
+            raise
+
+        # skip through until gene data
+        while ('Gene    Strand    LeftEnd    RightEnd       Gene     Class' not in current_line):
+            current_line = file.readline()
+        current_line = file.readline()  # read blank line
+
+        # arary for gene objs
+        genes = []
+        # get gene data
+        current_line = file.readline()
+        while current_line != '\n':
+            data = [x for x in current_line.strip().split(' ') if x != '']
+            genes.append(Gene(data[2], data[3], data[1], data[4]))
+            current_line = file.readline()
+
+        return genes
+
+    @staticmethod
+    def parse_genemarkHmm(hmm_file):
+        """
+        Parse GeneMark Hmm file for Gene data
+        :param hmm_file:
+        :return: list of Gene objects in file order
+        """
+        file = open(hmm_file, 'r')
+
+        # begin parse
+        current_line = file.readline()
+        # Check if proper GeneMark file
+        try:
+            if 'GeneMark.hmm' not in current_line:
+                raise GeneError("Hmm: Not a valid GeneMark Hmm file")
+        except GeneError:
+            raise
+
+        # skip through until gene data
+        while ('Gene    Strand    LeftEnd    RightEnd       Gene     Class' not in current_line):
+            current_line = file.readline()
+        current_line = file.readline()  # read blank line
+
+        # arary for gene objs
+        genes = []
+        # get gene data
+        current_line = file.readline()
+        while current_line != '\n':
+            data = [x for x in current_line.strip().split(' ') if x != '']
+            genes.append(Gene(data[2], data[3], data[1], data[4]))
+            current_line = file.readline()
+
+        return genes
+
+    @staticmethod
+    def parse_genemarkHeuristic(heuristic_file):
+        """
+        Parse GeneMark Heuristic file for Gene data
+        :param heuristic_file: GeneMark Heuristic output file
+        :return: list of Gene objects in order
+        """
+        file = open(heuristic_file, 'r')
+
+        # begin parse
+        current_line = file.readline()
+        # Check if proper GeneMark file
+        try:
+            if 'GeneMark.hmm' not in current_line:
+                raise GeneError("Hmm: Not a valid GeneMark Hmm file")
+        except GeneError:
+            raise
+
+        # skip through until gene data
+        while ('Gene    Strand    LeftEnd    RightEnd       Gene     Class' not in current_line):
+            current_line = file.readline()
+        current_line = file.readline()  # read blank line
+
+        # arary for gene objs
+        genes = []
+        # get gene data
+        current_line = file.readline()
+        while current_line != '\n':
+            data = [x for x in current_line.strip().split(' ') if x != '']
+            genes.append(Gene(data[2], data[3], data[1], data[4]))
+            current_line = file.readline()
+
+        return genes
+
+    @staticmethod
+    def parse_genemarkS2(s2_file):
+        """
+        Parse GeneMark S2 file for Gene data
+        :param s2_file: GeneMark S2 output file
+        :return: list of Gene objects in file order
+        """
+        file = open(s2_file, 'r')
+
+        # skip until gene data
+        curr_line = file.readline()
+        while ('SequenceID' not in curr_line):
+            curr_line = file.readline()
+
+        # Get gene data
+        genes = []
+        curr_line = file.readline()
+        while curr_line != '\n':
+            data = [x for x in curr_line.strip().split(' ') if x != '']
+            genes.append(Gene(data[2], data[3], data[1], data[4]))
+            curr_line = file.readline()
+
+        return genes
+
+
+if __name__ == '__main__':
+    my_file = 'D:\mdlaz\Documents\college\Research\PhageProject_Sept2018\GeneSequences\Diane complete.fasta'
+    # Create GeneFile from sequence file and query
+    sequence = GeneFile(my_file)
+    for x in GeneParse.parse_genemark('Diane complete.gm'):
+        print(x)
