@@ -296,16 +296,17 @@ class Gene:
     Class for representing a potential gene encoding
     """
 
-    def __init__(self, start, stop, direction, length):
+    def __init__(self, start, stop, direction, identity=''):
         """
         Constructor
         :param start:  start codon (int)
         :param stop:   end codon (int)
         :param direction: +/-
-        :param length: length of gene (int)
+        :param identity: optional identifier
         """
         self.start = int(start)
         self.stop = int(stop)
+        self.identity = identity
         # check for proper direction
         try:
             if direction != '+' and direction != '-':
@@ -314,7 +315,7 @@ class Gene:
                 self.direction = direction
         except GeneError:
             raise
-        self.length = int(length)
+        self.length = self.stop - self.start + 1
 
     def __eq__(self, other):
         """
@@ -330,7 +331,7 @@ class Gene:
                     if self.direction == '+':
                         if self.stop == other.stop:
                             return True
-                    else: # - direction
+                    else:  # - direction
                         if self.start == other.start:
                             return True
             else:
@@ -358,7 +359,13 @@ class GeneParse:
     """
 
     @staticmethod
-    def parse_genemark(gm_file):
+    def parse_genemark(gm_file, identity=''):
+        """
+        Parse GeneMark output file for Genes
+        :param gm_file: GeneMark output file
+        :param identity: optional identifier for each Gene
+        :return: list of Genes in file order
+        """
         file = open(gm_file, 'r')
 
         # Skip until Regions of Interests
@@ -379,20 +386,19 @@ class GeneParse:
                 direction = '+'
             else:
                 direction = '-'
-            # get gene length
-            length = int(data[1]) - int(data[0]) + 1
             # add to list
-            genes.append(Gene(data[0], data[1], direction, length))
+            genes.append(Gene(data[0], data[1], direction, identity=identity))
             curr_line = file.readline()
 
         return genes
 
     @staticmethod
-    def parse_genemarkS(s_file):
+    def parse_genemarkS(s_file, identity=''):
         """
         Parse GeneMarkS file for Gene data
         :param s_file: GeneMarkS file
-        :return: list of Gene objects in file order
+        :param identity: optional identifier for each Gene
+        :return: list of Genes in file order
         """
         file = open(s_file, 'r')
 
@@ -416,17 +422,18 @@ class GeneParse:
         current_line = file.readline()
         while current_line != '\n':
             data = [x for x in current_line.strip().split(' ') if x != '']
-            genes.append(Gene(data[2], data[3], data[1], data[4]))
+            genes.append(Gene(data[2], data[3], data[1], identity=identity))
             current_line = file.readline()
 
         return genes
 
     @staticmethod
-    def parse_genemarkHmm(hmm_file):
+    def parse_genemarkHmm(hmm_file, identity=''):
         """
         Parse GeneMark Hmm file for Gene data
         :param hmm_file:
-        :return: list of Gene objects in file order
+        :param identity: optional identifier for each Gene
+        :return: list of Genes in file order
         """
         file = open(hmm_file, 'r')
 
@@ -450,17 +457,18 @@ class GeneParse:
         current_line = file.readline()
         while current_line != '\n':
             data = [x for x in current_line.strip().split(' ') if x != '']
-            genes.append(Gene(data[2], data[3], data[1], data[4]))
+            genes.append(Gene(data[2], data[3], data[1], identity=identity))
             current_line = file.readline()
 
         return genes
 
     @staticmethod
-    def parse_genemarkHeuristic(heuristic_file):
+    def parse_genemarkHeuristic(heuristic_file, identity=''):
         """
         Parse GeneMark Heuristic file for Gene data
         :param heuristic_file: GeneMark Heuristic output file
-        :return: list of Gene objects in order
+        :param identity: optional identifier for each Gene
+        :return: list of Genes in order
         """
         file = open(heuristic_file, 'r')
 
@@ -484,17 +492,18 @@ class GeneParse:
         current_line = file.readline()
         while current_line != '\n':
             data = [x for x in current_line.strip().split(' ') if x != '']
-            genes.append(Gene(data[2], data[3], data[1], data[4]))
+            genes.append(Gene(data[2], data[3], data[1], identity=identity))
             current_line = file.readline()
 
         return genes
 
     @staticmethod
-    def parse_genemarkS2(s2_file):
+    def parse_genemarkS2(s2_file, identity=''):
         """
         Parse GeneMark S2 file for Gene data
         :param s2_file: GeneMark S2 output file
-        :return: list of Gene objects in file order
+        :param identity: optional identifier for each Gene
+        :return: list of Genes in file order
         """
         file = open(s2_file, 'r')
 
@@ -508,7 +517,7 @@ class GeneParse:
         curr_line = file.readline()
         while curr_line != '\n':
             data = [x for x in curr_line.strip().split(' ') if x != '']
-            genes.append(Gene(data[2], data[3], data[1], data[4]))
+            genes.append(Gene(data[2], data[3], data[1], identity=identity))
             curr_line = file.readline()
 
         return genes
@@ -518,7 +527,7 @@ if __name__ == '__main__':
     my_file = 'D:\mdlaz\Documents\college\Research\PhageProject_Sept2018\GeneSequences\Diane complete.fasta'
     # Create GeneFile from sequence file and query
     sequence = GeneFile(my_file)
-
-    g1 = Gene(5, 2011, '-', 15)
-    g2 = Gene(5, 2001, '-', 15)
-    print(g1 == 'r')
+    gm = GeneParse.parse_genemarkHeuristic('Diane complete.heuristic', identity='heuristic')
+    print(len(gm))
+    for x in gm:
+        print(x)
