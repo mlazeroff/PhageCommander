@@ -56,9 +56,10 @@ class GeneFile:
         # File creation for post requests
         self.file_info = {'file': (self.name, input_file_data, 'application/octet-stream')}
 
-    def genemark_query(self):
+    def genemark_query(self, out=''):
         """
         Query to GeneMark
+        :param out: optional output file name
         :return:
         """
         # Begin GeneMark Lookup -----------------------------------------------------
@@ -86,15 +87,19 @@ class GeneFile:
             raise
 
         # write gm response to file
-        gm_output = open(self.name + '.gm', 'wb')
+        if out != '':
+            gm_output = open(out, 'wb')
+        else:
+            gm_output = open(self.name + '.gm', 'wb')
         getGMFile = requests.get(FILE_DOMAIN + file_location)
         getGMFile.raise_for_status()
         gm_output.write(getGMFile.content)
         # End GeneMark Lookup -------------------------------------------------------
 
-    def genemarkhmm_query(self):
+    def genemarkhmm_query(self, out=''):
         """
         Query GeneMark Hmm
+        :param out: optional output file name
         :return:
         """
         # Begin GeneMark Hmm Lookup -------------------------------------------------
@@ -121,17 +126,20 @@ class GeneFile:
                 raise GeneMarkError("GeneMark Hmm")
         except GeneMarkError:
             raise
-
         # write response to file
-        gmhmm_output = open(self.name + '.gmhmm', 'wb')
+        if out != '':
+            gmhmm_output = open(out, 'wb')
+        else:
+            gmhmm_output = open(self.name + '.gmhmm', 'wb')
         getHmmFile = requests.get(FILE_DOMAIN + file_location)
         getHmmFile.raise_for_status()
         gmhmm_output.write(getHmmFile.content)
         # End GeneMark Hmm Lookup --------------------------------------------------
 
-    def genemarks_query(self):
+    def genemarks_query(self, out=''):
         """
-        Query GeneMark S
+        Query GeneMarkS
+        :param out: optional output file name
         """
         # Begin GeneMarkS Lookup ---------------------------------------------------
         gms_data = {'sequence': '', 'submit': 'Start GeneMarkS', 'mode': 'prok', 'format': 'LST',
@@ -157,15 +165,19 @@ class GeneFile:
             raise
 
         # write response to file
-        gms_output = open(self.name + '.gms', 'wb')
+        if out != '':
+            gms_output = open(out, 'wb')
+        else:
+            gms_output = open(self.name + '.gms', 'wb')
         getGmsFile = requests.get(FILE_DOMAIN + file_location)
         getGmsFile.raise_for_status()
         gms_output.write(getGmsFile.content)
         # End GeneMarkS Lookup -----------------------------------------------------
 
-    def genemark_heuristic_query(self):
+    def genemark_heuristic_query(self, out=''):
         """
         Query GeneMark Heuristic
+        :param out: optional output file name
         """
         # Begin GeneMark Heuristic Lookup ------------------------------------------
         heuristic_data = {'sequence': '', 'submit': 'Start GeneMark.hmm', 'format': 'LST',
@@ -194,15 +206,19 @@ class GeneFile:
             raise
 
         # write response to file
-        heuristic_output = open(self.name + '.heuristic', 'wb')
+        if out != '':
+            heuristic_output = open(out, 'wb')
+        else:
+            heuristic_output = open(self.name + '.heuristic', 'wb')
         getHeuristicFile = requests.get(FILE_DOMAIN + file_location)
         getHeuristicFile.raise_for_status()
         heuristic_output.write(getHeuristicFile.content)
         # End GeneMark Heuristic Lookup -------------------------------------------
 
-    def genemarks2_query(self):
+    def genemarks2_query(self, out=''):
         """
         Query GeneMarkS2
+        :param out: optional output file name
         """
         # Begin GeneMarkS2 Lookup -------------------------------------------------
         gmms2_data = {'sequence': '', 'submit': 'GeneMarkS-2', 'mode': 'auto', 'format': 'lst',
@@ -228,7 +244,10 @@ class GeneFile:
             raise
 
         # write response to file
-        gms2_output = open(self.name + '.gms2', 'wb')
+        if out != '':
+            gms2_output = open(out, 'wb')
+        else:
+            gms2_output = open(self.name + '.gms2', 'wb')
         getGMS2File = requests.get(FILE_DOMAIN + file_location)
         getGMS2File.raise_for_status()
         gms2_output.write(getGMS2File.content)
@@ -259,7 +278,8 @@ class GeneFile:
 
 
 if __name__ == '__main__':
-    file = 'data/Diane complete.fasta'
+    file = 'D:\mdlaz\Documents\college\Research\PhageProject_Sept2018\GeneSequences\Diane complete.fasta'
     # Create GeneFile from sequence file and query
     sequence = GeneFile(file)
-    sequence.query_all()
+    sequence.genemarks2_query(out='s2.txt')
+
