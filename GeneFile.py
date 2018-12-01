@@ -652,7 +652,133 @@ class GeneParse:
 
 
 if __name__ == '__main__':
+
+    ##########################################################################
+    # Imports and Functions
+
     import argparse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, colors
+
+    # Functions
+    def write_gene(gene, row, ws, indexes):
+        """
+        Writes the passed gene into its corresponding columns in the Excel worksheet
+        :param gene: Gene object
+        :param row: row to write to
+        :param ws: openpyxl worksheet object
+        :param indexes: dictionary of indexes, organized by gene.identity labels
+        """
+        left = indexes[gene.identity][0][0] + str(row)
+        right = indexes[gene.identity][0][1] + str(row)
+        indexes[gene.identity][1] += 1
+
+        # write data
+        curr_row = ws[left:right][0]
+        curr_row[0].value = indexes[gene.identity][1]
+        curr_row[1].value = gene.direction
+        curr_row[1].alignment = Alignment(horizontal='center')
+        curr_row[2].value = gene.start
+        curr_row[3].value = gene.stop
+        curr_row[4].value = gene.length
+
+    def color_row(ws, row, color):
+        """
+        Colors the row according to passed color
+        Changes text color to white
+        :param ws: worksheet to alter
+        :param row: row number
+        :param color: openpyxl Fill profile
+        """
+        row = ws['A' + str(row):'AI' + str(row)][0]
+        for cell in row:
+            cell.fill = color
+            cell.font = Font(color=colors.WHITE)
+
+    def excel_write(output_directory, files, sequence):
+        """
+        Writes the content of the Gene files to a spreadsheet
+        :param output_directory: directory to output to
+        :param files: list of file names returned by GeneFile.query_all()
+        :param sequence: GeneFile object
+        """
+        # output to Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'Gene Calls'
+
+        indexes = dict()
+        indexes['GLIMMER'] = [['A', 'E'], 0]
+        indexes['GM'] = [['G', 'K'], 0]
+        indexes['HMM'] = [['M', 'Q'], 0]
+        indexes['GMS'] = [['S', 'W'], 0]
+        indexes['GMS2'] = [['Y', 'AC'], 0]
+        indexes['HEURISTIC'] = [['AE', 'AI'], 0]
+        headers_names = ['No.', 'Direction', 'Start', 'Stop', 'Length']
+
+        # Row colors according to # of same genes
+        colors = dict()
+        colors[6] = PatternFill(fgColor='215967', fill_type='solid')
+        colors[5] = PatternFill(fgColor='31869b', fill_type='solid')
+        colors[4] = PatternFill(fgColor='92cddc', fill_type='solid')
+        colors[3] = PatternFill(fgColor='b7dee8', fill_type='solid')
+        colors[2] = PatternFill(fgColor='daeef3', fill_type='solid')
+
+        # Format Columns
+        for x in indexes.items():
+            value = x[1]
+            first = ws[value[0][0] + str(1): value[0][1] + str(1)][0]
+            # Gene Program Label
+            for column in first:
+                column.value = x[0]
+                column.font = Font(bold=True)
+                column.alignment = Alignment(horizontal='center')
+
+            # Column Headers
+            second = ws[value[0][0] + str(2): value[0][1] + str(2)][0]
+            for index, column in enumerate(second):
+                column.value = headers_names[index]
+                column.alignment = Alignment(horizontal='center')
+
+        # get genes
+        glim = GeneParse.parse_glimmer(files[0], identity='GLIMMER')
+        gm = GeneParse.parse_genemark(files[1], identity='GM')
+        hmm = GeneParse.parse_genemarkHmm(files[2], identity='HMM')
+        gms = GeneParse.parse_genemarkS(files[3], identity='GMS')
+        gms2 = GeneParse.parse_genemarkS2(files[4], identity='GMS2')
+        heuristic = GeneParse.parse_genemarkHeuristic(files[5], identity='HEURISTIC')
+        total = sorted(glim + gm + hmm + gms + gms2 + heuristic, key=lambda x: x.start)
+
+        # write to file
+        row = 3
+        count = 0
+        genes_in_row = 1
+        while count < len(total):
+            curr_gene = total[count]
+            # print same genes on the same line, different ones on different lines
+            if count != 0:
+                if curr_gene != total[count - 1]:
+                    # color previous row according to same # of genes
+                    if genes_in_row > 1:
+                        color_row(ws, row, colors[genes_in_row])
+                    # move to next row and reset genes count
+                    row += 1
+                    genes_in_row = 1
+                else:
+                    genes_in_row += 1
+
+            write_gene(curr_gene, row, ws, indexes)
+            count += 1
+
+        # apply color for last row
+            # color previous row according to same # of genes
+            if genes_in_row > 1:
+                color_row(ws, row, colors[genes_in_row])
+
+        wb.save(output_directory + sequence.name + '.xlsx')
+
+###############################################################################
+    # BEGIN MAIN EXECUTION
 
     # parse arguments
     parser = argparse.ArgumentParser()
@@ -671,11 +797,10 @@ if __name__ == '__main__':
     # query
     files = sequence.query_all(output=args.output)
 
-    # TODO: Add excel output code here
+    # write to Excel file
+    excel_write(args.output, files, sequence)
 
     # If -rm flag given, remove all output files
     if args.rm:
         for file in files:
             os.remove(file)
-
-
