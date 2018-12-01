@@ -413,6 +413,36 @@ class GeneParse:
     Class for parsing GeneMark output files
     All methods are static
     """
+    @staticmethod
+    def parse_glimmer(glimmer_file, identity=''):
+        """
+        Parse Glimmer output file for Genes
+        :param glimmer_file: Glimmer output file
+        :param identity: optional identifier for each Gene
+        :return: list of Genes in file order
+        """
+
+        file = open(glimmer_file, 'r')
+
+        # skip first line
+        curr_line = file.readline()
+
+        # Get Gene data
+        genes = []
+        curr_line = file.readline()
+        while 'html' not in curr_line:
+            data = [x for x in curr_line.split(' ') if x != '']
+            # get gene direction and create Gene
+            if '+' in data[3]:
+                genes.append(Gene(data[1], data[2], '+', identity=identity))
+            else:
+                genes.append(Gene(data[2], data[1], '-', identity=identity))
+
+            # grab next line
+            curr_line = file.readline()
+
+        # return list of Genes
+        return genes
 
     @staticmethod
     def parse_genemark(gm_file, identity=''):
@@ -583,4 +613,4 @@ if __name__ == '__main__':
     my_file = 'D:\mdlaz\Documents\college\Research\PhageProject_Sept2018\GeneSequences\Diane complete.fasta'
     # Create GeneFile from sequence file and query
     sequence = GeneFile(my_file)
-    sequence.glimmer_query()
+    print(len(GeneParse.parse_glimmer('Diane complete.glimmer')))
