@@ -328,12 +328,13 @@ class GeneFile:
 
     def query_all(self):
         """
-        Query: GeneMark, GeneMarkHmm, GeneMarkS, GeneMarkS2, and GeneMark Heuristic
+        Query: Glimmer, GeneMark, GeneMarkHmm, GeneMarkS, GeneMarkS2, and GeneMark Heuristic
         :return: list of files written to in the following order:
-                GeneMark, GeneMark Hmm, GeneMarkS, GeneMarkS2, GeneMarkHeuristic
+               Glimmer, GeneMark, GeneMark Hmm, GeneMarkS, GeneMarkS2, GeneMarkHeuristic
         """
 
-        files = [self.genemark_query(),
+        files = [self.glimmer_query(),
+                 self.genemark_query(),
                  self.genemarkhmm_query(),
                  self.genemarks_query(),
                  self.genemarks2_query(),
@@ -413,6 +414,7 @@ class GeneParse:
     Class for parsing GeneMark output files
     All methods are static
     """
+
     @staticmethod
     def parse_glimmer(glimmer_file, identity=''):
         """
@@ -610,7 +612,4 @@ class GeneParse:
 
 
 if __name__ == '__main__':
-    my_file = 'D:\mdlaz\Documents\college\Research\PhageProject_Sept2018\GeneSequences\Diane complete.fasta'
-    # Create GeneFile from sequence file and query
-    sequence = GeneFile(my_file)
-    print(len(GeneParse.parse_glimmer('Diane complete.glimmer')))
+    pass
