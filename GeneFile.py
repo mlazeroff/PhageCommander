@@ -6,6 +6,8 @@ Author: Matthew Lazeroff
 import requests
 from bs4 import BeautifulSoup
 import time
+import os
+import sys
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.biology.gatech.edu/GeneMark/'
@@ -52,7 +54,8 @@ class GeneFile:
                 input_file_data += current_byte
                 current_byte = input_file.read(1)
 
-        self.name = 'Diane complete'
+        # get base file name
+        self.name = str(os.path.basename(sequence_file).split('.')[0])
 
         # File creation for post requests
         self.file_info = {'file': (self.name, input_file_data, 'application/octet-stream')}
@@ -326,20 +329,57 @@ class GeneFile:
         return output
         # End GeneMarkS2 Lookup --------------------------------------------------
 
-    def query_all(self):
+    def query_all(self, output=''):
         """
         Query: Glimmer, GeneMark, GeneMarkHmm, GeneMarkS, GeneMarkS2, and GeneMark Heuristic
+        :output: optional output directory, otherwise outputs to GeneFile directory
         :return: list of files written to in the following order:
                Glimmer, GeneMark, GeneMark Hmm, GeneMarkS, GeneMarkS2, GeneMarkHeuristic
         """
 
-        files = [self.glimmer_query(),
-                 self.genemark_query(),
-                 self.genemarkhmm_query(),
-                 self.genemarks_query(),
-                 self.genemarks2_query(),
-                 self.genemark_heuristic_query()]
+        # list containing file output names
+        files = []
 
+        # Begin Queries
+        print('Start Querying:')
+
+        # Glimmer
+        print('Glimmer...', end='', flush=True)
+        files.append(self.glimmer_query(out=output + self.name + '.glimmer'))
+        print('done', flush=True)
+
+        # GeneMark
+        print('GeneMark...', end='', flush=True)
+        files.append(self.genemark_query(out=output + self.name + '.gm'))
+        print('done', flush=True)
+
+        # Hmm
+        print('Hmm...', end='', flush=True)
+        files.append(self.genemarkhmm_query(out=output + self.name + '.gmhmm'))
+        print('done', flush=True)
+
+        # GMS
+        print('GMS...', end='', flush=True)
+        files.append(self.genemarks_query(out=output + self.name + '.gms'))
+        print('done', flush=True)
+
+        # GMS2
+        print('GMS2...', end='', flush=True)
+        files.append(self.genemarks2_query(out=output + self.name + '.gms2'))
+        print('done', flush=True)
+
+        # Heuristic
+        print('Heuristic...', end='', flush=True)
+        files.append(self.genemark_heuristic_query(out=output + self.name + '.heuristic'))
+        print('done', flush=True)
+
+        if output != '':
+            directory = output
+        else:
+            directory = os.getcwd()
+        print('Files written to:', directory)
+
+        # return file list
         return files
 
 
