@@ -652,4 +652,30 @@ class GeneParse:
 
 
 if __name__ == '__main__':
-    pass
+    import argparse
+
+    # parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('sequence', help='DNA sequence file')
+    parser.add_argument('output', help='Output directory')
+    parser.add_argument('-rm', help='Remove all Glimmer/GeneMark output files', action='store_true')
+    args = parser.parse_args()
+
+    # create sequence
+    sequence = GeneFile(args.sequence)
+
+    # check if output directory exists, if not, create it
+    if not os.path.isdir(args.output):
+        os.mkdir(args.output)
+
+    # query
+    files = sequence.query_all(output=args.output)
+
+    # TODO: Add excel output code here
+
+    # If -rm flag given, remove all output files
+    if args.rm:
+        for file in files:
+            os.remove(file)
+
+
