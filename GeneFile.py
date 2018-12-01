@@ -5,6 +5,7 @@ Author: Matthew Lazeroff
 
 import requests
 from bs4 import BeautifulSoup
+import time
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.biology.gatech.edu/GeneMark/'
@@ -13,6 +14,7 @@ GM_HMM_DOMAIN = 'http://exon.gatech.edu/GeneMark/gmhmmp.cgi'
 GMS_DOMAIN = 'http://exon.gatech.edu/GeneMark/genemarks.cgi'
 HEURISTIC_DOMAIN = 'http://exon.gatech.edu/GeneMark/heuristic_gmhmmp.cgi'
 GMS2_DOMAIN = 'http://exon.gatech.edu/GeneMark/genemarks2.cgi'
+GLIMMER_DOMAIN = 'http://18.220.233.194/glimmer'
 
 
 class Error(Exception):
@@ -22,7 +24,7 @@ class Error(Exception):
     pass
 
 
-class GeneMarkError(Error):
+class GeneFileError(Error):
     """
     Raised when no result from GeneMark is returned
     """
@@ -55,6 +57,60 @@ class GeneFile:
         # File creation for post requests
         self.file_info = {'file': (self.name, input_file_data, 'application/octet-stream')}
 
+    def glimmer_query(self, out=''):
+        """
+        Queries Glimmer for DNA sequence and writes content to file
+        :param out: optional output file name
+        :return: name of file that was created
+        """
+
+        # parameters
+        payload = [('sequence', self.file_info['file'][1]),
+                   ('gencode', b'11'), ('topology', b'0'),
+                   ('submit', b'Run GLIMMER v3.02')]
+
+        # headers
+        headers = {'User-Agent': 'GeneQuery'}
+
+        # perform POST of file data
+        file_post = requests.post(GLIMMER_DOMAIN, data=payload, headers=headers)
+        file_post.raise_for_status()
+        # check for job_key in response, if not raise error
+        try:
+            if 'job_key' not in file_post.text:
+                raise GeneFileError("Glimmer POST #1: Invalid response")
+        except GeneFileError:
+            raise
+
+        # get job_key from response
+        job_key = file_post.text.split('=')
+        payload = [(job_key[0], job_key[1])]
+
+        # query server for output file
+        # if output file is not ready, wait 2 seconds and requery
+        try:
+            time.sleep(2)
+            return_post = requests.post(GLIMMER_DOMAIN, data=payload, headers=headers)
+            return_post.raise_for_status()
+            while 'DOCTYPE' not in return_post.text:
+                time.sleep(2)
+                return_post = requests.post(GLIMMER_DOMAIN, data=payload, headers=headers)
+                return_post.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            raise GeneFileError(
+                'Glimmer Server Error: Check for DNA for proper format or check server status')
+
+        # write data to file
+        if out != '':
+            output = out
+        else:
+            output = self.name + '.glimmer'
+        glimmer_output = open(output, 'wb')
+        glimmer_output.write(return_post.content)
+
+        # return file name
+        return output
+
     def genemark_query(self, out=''):
         """
         Query to GeneMark
@@ -81,8 +137,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneMarkError("GeneMark")
-        except GeneMarkError:
+                raise GeneFileError("GeneMark")
+        except GeneFileError:
             raise
 
         # write gm response to file
@@ -125,8 +181,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneMarkError("GeneMark Hmm")
-        except GeneMarkError:
+                raise GeneFileError("GeneMark Hmm")
+        except GeneFileError:
             raise
         # write response to file
         if out != '':
@@ -166,8 +222,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneMarkError("GeneMarkS")
-        except GeneMarkError:
+                raise GeneFileError("GeneMarkS")
+        except GeneFileError:
             raise
 
         # write response to file
@@ -211,8 +267,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneMarkError("GeneMark Heuristic")
-        except GeneMarkError:
+                raise GeneFileError("GeneMark Heuristic")
+        except GeneFileError:
             raise
 
         # write response to file
@@ -253,8 +309,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneMarkError("GeneMarkS2")
-        except GeneMarkError:
+                raise GeneFileError("GeneMarkS2")
+        except GeneFileError:
             raise
 
         # write response to file
@@ -527,7 +583,4 @@ if __name__ == '__main__':
     my_file = 'D:\mdlaz\Documents\college\Research\PhageProject_Sept2018\GeneSequences\Diane complete.fasta'
     # Create GeneFile from sequence file and query
     sequence = GeneFile(my_file)
-    gm = GeneParse.parse_genemarkHeuristic('Diane complete.heuristic', identity='heuristic')
-    print(len(gm))
-    for x in gm:
-        print(x)
+    sequence.glimmer_query()
