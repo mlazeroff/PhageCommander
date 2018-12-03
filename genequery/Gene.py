@@ -22,7 +22,7 @@ GMS2_DOMAIN = 'http://exon.gatech.edu/GeneMark/genemarks2.cgi'
 GLIMMER_DOMAIN = 'http://18.220.233.194/glimmer'
 
 # species
-SPECIES = [x.strip() for x in open(os.path.split(__file__)[0] + '\species.txt', 'r')]
+SPECIES = [x.strip() for x in open(os.path.split(__file__)[0] + '/species.txt', 'r')]
 
 
 class Error(Exception):
