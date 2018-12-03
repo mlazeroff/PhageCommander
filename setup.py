@@ -9,14 +9,13 @@ setuptools.setup(
     description='Utilties for analyzing Fasta DNA Sequences with GeneMark/Glimmer',
     url='https://github.com/mlazeroff/GeneQuery',
     packages=['genequery'],
+    package_data={'genequery':'species.txt'},
     install_requires=['requests',
                       'beautifulsoup4',
                       'openpyxl'],
     classifiers=["Programming Language :: Python :: 3",
                  "License :: OSI Approved :: GPL-3",
                  "Operating System :: Windows"],
-    entry_points={
-        'gui_scripts': ['GeneQuery=genequery.gene_query:main']
-    },
+
     include_package_data=True
 )
