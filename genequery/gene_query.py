@@ -255,5 +255,9 @@ def query_thread(func, output, files, lock):
         files.append(file)
 
 
-if __name__ == '__main__':
+def main():
     app = App()
+
+
+if __name__ == '__main__':
+    main()

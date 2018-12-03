@@ -15,6 +15,8 @@ setuptools.setup(
     classifiers=["Programming Language :: Python :: 3",
                  "License :: OSI Approved :: GPL-3",
                  "Operating System :: Windows"],
-    scripts=['bin/gene_query.pyw'],
+    entry_points={
+        'gui_scripts': ['GeneQuery=genequery.gene_query:main']
+    },
     include_package_data=True
 )
