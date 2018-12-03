@@ -141,54 +141,76 @@ class App:
         try:
             sequence = Gene.GeneFile(self.input_entry_var.get())
             # query DNA sequence and update progress bar
-            files = []
-            files.append(sequence.glimmer_query(out=output + sequence.name + '.glimmer'))
-            self.progress.step(1)
-            self.root.update_idletasks()
-            files.append(sequence.genemark_query(out=output + sequence.name + '.gm'))
-            self.progress.step(1)
-            self.root.update_idletasks()
-            files.append(sequence.genemarkhmm_query(out=output + sequence.name + '.gmhmm'))
-            self.progress.step(1)
-            self.root.update_idletasks()
-            files.append(sequence.genemarks_query(out=output + sequence.name + '.gms'))
-            self.progress.step(1)
-            self.root.update_idletasks()
-            files.append(sequence.genemarks2_query(out=output + sequence.name + '.gms2'))
-            self.progress.step(1)
-            self.root.update_idletasks()
-            files.append(sequence.genemark_heuristic_query(out=output + sequence.name + '.heuristic'))
+            self.files = []
+            lock = threading.Lock()
+            threads = [threading.Thread(target=query_thread,
+                                        args=(sequence.glimmer_query,
+                                              output + sequence.name + '.glimmer',
+                                              self.files,
+                                              lock)),
+                       threading.Thread(target=query_thread,
+                                        args=(sequence.genemark_query,
+                                              output + sequence.name + '.gm',
+                                              self.files,
+                                              lock)),
+                       threading.Thread(target=query_thread,
+                                        args=(sequence.genemarkhmm_query,
+                                              output + sequence.name + '.gmhmm',
+                                              self.files,
+                                              lock)),
+                       threading.Thread(target=query_thread,
+                                        args=(sequence.genemarks_query,
+                                              output + sequence.name + '.gms',
+                                              self.files,
+                                              lock)),
+                       threading.Thread(target=query_thread,
+                                        args=(sequence.genemarks2_query,
+                                              output + sequence.name + '.gms2',
+                                              self.files,
+                                              lock)),
+                       threading.Thread(target=query_thread,
+                                        args=(sequence.genemark_heuristic_query,
+                                              output + sequence.name + '.heuristic',
+                                              self.files,
+                                              lock))]
+
+            for x in threads:
+                x.start()
+
+            # wait until threads finish
+            self.wait_gui()
             self.progress.step(1)
             self.root.update_idletasks()
 
             # write to excel
-            Gene.excel_write(output, files, sequence)
+            Gene.excel_write(output, self.files, sequence)
             self.progress.step(1)
             self.root.update_idletasks()
 
             # show success message
-
-            # enable query button
-            self.query_button.state(['!disabled'])
-            self.progress['value'] = 0
+            messagebox.showinfo(title='Gene Queried!',
+                                message='Gene Query Successful. Files written to: ' + output)
 
         except FileNotFoundError:
             messagebox.showerror(title='Invalid Input File',
                                  message='Provided input file does not exist.')
-            self.query_button.state(['!disabled'])
-            return
         except Exception as e:
             messagebox.showerror(title='Query Error',
                                  message=str(e))
-            self.query_button.state(['!disabled'])
-            return
 
+        # enable query button / reset progress
         self.query_button.state(['!disabled'])
+        self.progress['value'] = 0
 
-    def query_thread(self, func, output, files, lock, ):
-        file = func(out=output)
-        with lock:
-            files.append(file)
+    def wait_gui(self):
+        """
+        Method for GUI to wait and update progress bar while threads finish
+        :return:
+        """
+        while len(self.files) != 6:
+            self.progress['value'] = len(self.files)
+            self.root.update_idletasks()
+            self.root.after(100, self.wait_gui)
 
     def __validate_input(self):
         """
@@ -214,6 +236,20 @@ class App:
             return False
 
         return True
+
+
+def query_thread(func, output, files, lock):
+    """
+    Function called by threads to call Tool APIs
+    :param func: GeneFile.query() call
+    :param output: output file name
+    :param files: list of outputted file names
+    :param lock: lock to protect files list
+    :return:
+    """
+    file = func(out=output)
+    with lock:
+        files.append(file)
 
 
 if __name__ == '__main__':
