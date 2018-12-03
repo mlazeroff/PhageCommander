@@ -15,13 +15,9 @@ The following gene-encoding prediction tools are called:
 * Python 3.*
 * Windows (note - may work with other operating systems, but not guaranteed)
 ### Installing
-Download the repository
+Install via pip
 ```angular2html
-git clone https://github.com/mlazeroff/GeneQuery
-```
-Install with pip
-```angular2html
-pip install ./GeneQuery
+pip install git+https://github.com/mlazeroff/GeneQuery
 ```
 ## Using the tool
 ### Terminal Version
