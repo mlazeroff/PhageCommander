@@ -43,7 +43,7 @@ class GeneFile:
     Class for querying GeneMark tools for a DNA sequence
     """
 
-    def __init__(self, sequence_file):
+    def __init__(self, sequence_file, species):
         """
         Constructor
         Generates necessary parameters for post requests from DNA fasta file
@@ -62,6 +62,15 @@ class GeneFile:
 
         # File creation for post requests
         self.file_info = {'file': (self.name, input_file_data, 'application/octet-stream')}
+
+        # Gene species - Check if compatible type, if not, exit
+        species_list = [x.strip() for x in open('species.txt', 'r')]
+        try:
+            if species not in species_list:
+                raise GeneFileError("{} is not a compatible species type - See species.txt".format(species))
+        except GeneFileError:
+            raise
+        self.species = species
 
     def glimmer_query(self, out=''):
         """
@@ -124,7 +133,7 @@ class GeneFile:
         :return: name of file created
         """
         # Begin GeneMark Lookup -----------------------------------------------------
-        gm_data = {'sequence': '', 'org': 'Escherichia_coli_K_12_substr__MG1655',
+        gm_data = {'sequence': '', 'org': self.species,
                    'submit': 'Start GeneMark', 'email': '', 'subject': 'GeneMark', 'windowsize': 96,
                    'stepsize': 12, 'threshold': 0.5, 'rbs': 'none', 'mode': 'native'}
 
@@ -167,7 +176,7 @@ class GeneFile:
         :return: name of file created
         """
         # Begin GeneMark Hmm Lookup -------------------------------------------------
-        gm_hmm_data = {'sequence': '', 'org': 'Escherichia_coli_K_12_substr__MG1655',
+        gm_hmm_data = {'sequence': '', 'org': self.species,
                        'submit': 'Start GeneMark.hmm', 'format': 'LST',
                        'subject': 'GeneMark.hmm prokaryotic',
                        'email': ''}
@@ -503,6 +512,9 @@ class GeneParse:
         curr_line = file.readline()
         while (' LEnd      REnd    Strand      Frame' not in curr_line):
             curr_line = file.readline()
+            if curr_line == '':  # if file was empty
+                return []
+
 
         # read blank line
         curr_line = file.readlines(2)
@@ -789,12 +801,13 @@ if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('sequence', help='DNA sequence file')
+    parser.add_argument('species', help='DNA species, see species.txt for full list')
     parser.add_argument('output', help='Output directory')
     parser.add_argument('-rm', help='Remove all Glimmer/GeneMark output files', action='store_true')
     args = parser.parse_args()
 
     # create sequence
-    sequence = GeneFile(args.sequence)
+    sequence = GeneFile(args.sequence, args.species)
 
     # check if output directory exists, if not, create it
     if not os.path.isdir(args.output):
