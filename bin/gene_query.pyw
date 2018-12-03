@@ -47,7 +47,7 @@ class App:
                                        text='Species',
                                        justify='left')
         # Load list of species from species.txt
-        self.species = [x.strip() for x in open('species.txt', 'r')]
+        self.species = Gene.SPECIES
         self.species_var = StringVar()
         self.species_box = ttk.Combobox(self.species_frame,
                                         textvariable=self.species_var,
@@ -193,7 +193,8 @@ class App:
             messagebox.showinfo(title='Gene Queried!',
                                 message='Gene Query Successful. Files written to: ' + output)
 
-        except FileNotFoundError:
+        except FileNotFoundError as e:
+            print(e)
             messagebox.showerror(title='Invalid Input File',
                                  message='Provided input file does not exist.')
         except Exception as e:

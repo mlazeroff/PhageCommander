@@ -21,6 +21,9 @@ HEURISTIC_DOMAIN = 'http://exon.gatech.edu/GeneMark/heuristic_gmhmmp.cgi'
 GMS2_DOMAIN = 'http://exon.gatech.edu/GeneMark/genemarks2.cgi'
 GLIMMER_DOMAIN = 'http://18.220.233.194/glimmer'
 
+# species
+SPECIES = [x.strip() for x in open(os.path.split(__file__)[0] + '\species.txt', 'r')]
+
 
 class Error(Exception):
     """
@@ -64,8 +67,7 @@ class GeneFile:
         self.file_info = {'file': (self.name, input_file_data, 'application/octet-stream')}
 
         # Gene species - Check if compatible type, if not, exit
-        species_list = [x.strip() for x in open('species.txt', 'r')]
-        if species not in species_list:
+        if species not in SPECIES :
             raise GeneFileError(
                 "{} is not a compatible species type - See species.txt".format(species))
         self.species = species
