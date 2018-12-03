@@ -25,13 +25,22 @@ pip install ./GeneQuery
 ```
 ## Using the tool
 ### Terminal Version
-Usage: python3 Gene <fasta_sequence> <species> <output_directory> <-rm>
+Usage: python3 Gene "fasta_sequence" "species" "output_directory" -rm
 * fasta_sequence - Fasta formatted DNA sequence file
 * species - DNA species, full list located in species.txt
 * output_directory  - folder to output files to
 * -rm - delete intermediate output files, leaves only .xlsx file
 ```angular2html
-python3 Gene Lisa.fasta Acidianus_hospitalis_W1 ./output/
+>>> python3 Gene Lisa.fasta Acidianus_hospitalis_W1 ./output/
+Querying:
+Glimmer...done
+GeneMark...done
+Hmm...done
+GMS...done
+GMS2...done
+Heuristic...done
+Files written to: ./output/
+>>>
 ```
 ### GUI Version
 Start via terminal
