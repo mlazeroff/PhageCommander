@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-    name='gene_query',
+    name='genequery',
     license='GPL-3',
     version='0.1dev',
     author='Matthew Lazeroff',
