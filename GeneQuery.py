@@ -139,7 +139,7 @@ class App:
         output = self.output_entry_var.get()
         # try to open DNA file, if error, prompt user
         try:
-            sequence = Gene.GeneFile(self.input_entry_var.get())
+            sequence = Gene.GeneFile(self.input_entry_var.get(), self.species_var.get())
             # query DNA sequence and update progress bar
             self.files = []
             lock = threading.Lock()
