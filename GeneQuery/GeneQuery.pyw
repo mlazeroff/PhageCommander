@@ -1,7 +1,7 @@
 """
 GUI of Gene
 """
-import Gene
+from GeneQuery import Gene
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog

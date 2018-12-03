@@ -65,11 +65,9 @@ class GeneFile:
 
         # Gene species - Check if compatible type, if not, exit
         species_list = [x.strip() for x in open('species.txt', 'r')]
-        try:
-            if species not in species_list:
-                raise GeneFileError("{} is not a compatible species type - See species.txt".format(species))
-        except GeneFileError:
-            raise
+        if species not in species_list:
+            raise GeneFileError(
+                "{} is not a compatible species type - See species.txt".format(species))
         self.species = species
 
     def glimmer_query(self, out=''):
@@ -514,7 +512,6 @@ class GeneParse:
             curr_line = file.readline()
             if curr_line == '':  # if file was empty
                 return []
-
 
         # read blank line
         curr_line = file.readlines(2)
