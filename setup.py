@@ -13,9 +13,9 @@ setuptools.setup(
     install_requires=['requests',
                       'beautifulsoup4',
                       'openpyxl'],
+    entry_points={'console_scripts':'gquery = scripts.gquery:main'},
     classifiers=["Programming Language :: Python :: 3",
                  "License :: OSI Approved :: GPL-3",
                  "Operating System :: Windows"],
-
     include_package_data=True
 )
