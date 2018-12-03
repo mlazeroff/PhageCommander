@@ -8,7 +8,7 @@ setuptools.setup(
     author_email='lazeroff@unlv.nevada.edu',
     description='Utilties for analyzing Fasta DNA Sequences with GeneMark/Glimmer',
     url='https://github.com/mlazeroff/GeneQuery',
-    packages=['GeneQuery'],
+    packages=['genequery'],
     install_requires=['requests',
                       'beautifulsoup4',
                       'openpyxl'],
