@@ -736,13 +736,24 @@ def excel_write(output_directory, files, sequence):
             column.alignment = Alignment(horizontal='center')
 
     # get genes
-    glim = GeneParse.parse_glimmer(files[0], identity='GLIMMER')
-    gm = GeneParse.parse_genemark(files[1], identity='GM')
-    hmm = GeneParse.parse_genemarkHmm(files[2], identity='HMM')
-    gms = GeneParse.parse_genemarkS(files[3], identity='GMS')
-    gms2 = GeneParse.parse_genemarkS2(files[4], identity='GMS2')
-    heuristic = GeneParse.parse_genemarkHeuristic(files[5], identity='HEURISTIC')
-    total = sorted(glim + gm + hmm + gms + gms2 + heuristic, key=lambda x: x.start)
+    genes = []
+    # parse files depending on file type and add genes to genes list
+    for file in files:
+        file_type = os.path.split(file)[1].split('.')[1]
+        if file_type == 'glimmer':
+            genes += GeneParse.parse_glimmer(file, identity='GLIMMER')
+        elif file_type == 'gm':
+            genes += GeneParse.parse_genemark(file, identity='GM')
+        elif file_type == 'gmhmm':
+            genes += GeneParse.parse_genemarkHmm(file, identity='HMM')
+        elif file_type == 'gms':
+            genes += GeneParse.parse_genemarkS(file, identity='GMS')
+        elif file_type == 'gms2':
+            genes += GeneParse.parse_genemarkS2(file, identity='GMS2')
+        elif file_type == 'heuristic':
+            genes += GeneParse.parse_genemarkHeuristic(file, identity='HEURISTIC')
+
+    total = sorted(genes, key=lambda x: x.start)
 
     # write to file
     row = 3
