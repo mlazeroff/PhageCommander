@@ -2,6 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='gene_query',
+    license='GPL-3',
     version='0.1dev',
     author='Matthew Lazeroff',
     author_email='lazeroff@unlv.nevada.edu',
@@ -14,5 +15,6 @@ setuptools.setup(
     classifiers=["Programming Language :: Python :: 3",
                  "License :: OSI Approved :: GPL-3",
                  "Operating System :: Windows"],
+    scripts=['bin/GeneQuery.pyw'],
     include_package_data=True
 )
