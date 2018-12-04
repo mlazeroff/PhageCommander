@@ -7,7 +7,6 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import os
-import sys
 import argparse
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, colors
@@ -219,7 +218,7 @@ class GeneFile:
         :return: name of file created
         """
         # Begin GeneMarkS Lookup ---------------------------------------------------
-        gms_data = {'sequence': '', 'submit': 'Start GeneMarkS', 'mode': 'prok', 'format': 'LST',
+        gms_data = {'sequence': '', 'submit': 'Start GeneMarkS', 'mode': 'phage', 'format': 'LST',
                     'subject': 'GeneMarkS', 'gcode': 11}
 
         # GeneMarkS post - if unsuccessful, error thrown
