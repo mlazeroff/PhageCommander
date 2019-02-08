@@ -136,7 +136,7 @@ class App:
             pass
 
         # set progressbar (6 tools + 1 excel write)
-        self.progress.configure(maximum=7)
+        self.progress.configure(maximum=8)
 
         output = self.output_entry_var.get()
         # try to open DNA file, if error, prompt user
@@ -174,8 +174,12 @@ class App:
                                         args=(sequence.genemark_heuristic_query,
                                               output + sequence.name + '.heuristic',
                                               self.files,
+                                              lock)),
+                       threading.Thread(target=query_thread,
+                                        args=(sequence.prodigal_query,
+                                              output + sequence.name + '.prodigal',
+                                              self.files,
                                               lock))]
-
             for x in threads:
                 x.start()
 
@@ -210,7 +214,7 @@ class App:
         Method for GUI to wait and update progress bar while threads finish
         :return:
         """
-        while len(self.files) != 6:
+        while len(self.files) != 7:
             self.progress['value'] = len(self.files)
             self.root.update_idletasks()
             self.root.after(100, self.wait_gui)

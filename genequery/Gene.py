@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 import time
 import os
 import argparse
+from subprocess import Popen, PIPE
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, colors
 
@@ -59,6 +60,8 @@ class GeneFile:
                 input_file_data += current_byte
                 current_byte = input_file.read(1)
 
+        # full path
+        self.full = sequence_file
         # get base file name
         self.name = str(os.path.basename(sequence_file).split('.')[0])
 
@@ -340,6 +343,31 @@ class GeneFile:
         return output
         # End GeneMarkS2 Lookup --------------------------------------------------
 
+    def prodigal_query(self, out=''):
+        """
+        Calls prodigal to analyze file
+        :param out: optional output file name
+        :return: file name written to
+        """
+        # get path for prodigal exe
+        exe_location = os.path.split(os.path.abspath(__file__))[0] + '/prodigal.windows.exe'
+        if out == '':
+            out = '{}.prodigal'.format(self.name)
+
+        # generate prodigal command and run
+        cmd = '{} -i \"{}\" -p meta -o \"{}\"'.format(exe_location, self.full, out)
+        proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+        stdout, stderr = proc.communicate()
+
+        # check for error, exit if so
+        if proc.returncode != 0:
+            print(stderr)
+            raise GeneFileError("Prodigal")
+
+        # return file name
+        print(out)
+        return out
+
     def query_all(self, output=''):
         """
         Query: Glimmer, GeneMark, GeneMarkHmm, GeneMarkS, GeneMarkS2, and GeneMark Heuristic
@@ -382,6 +410,11 @@ class GeneFile:
         # Heuristic
         print('Heuristic...', end='', flush=True)
         files.append(self.genemark_heuristic_query(out=output + self.name + '.heuristic'))
+        print('done', flush=True)
+
+        # Prodigal
+        print('Prodigal...', end='', flush=True)
+        files.append(self.prodigal_query(out=output + self.name + '.prodigal'))
         print('done', flush=True)
 
         if output != '':
@@ -663,6 +696,35 @@ class GeneParse:
 
         return genes
 
+    @staticmethod
+    def parse_prodigal(prodigal_file, identity=''):
+        """
+        Parse prodigal output file for Gene information
+        :param prodigal_file: prodigal output file
+        :param identity: optional identifier for Gene
+        :return: list of Genes in file order
+        """
+        file = open(prodigal_file, 'r')
+
+        # gene info starts on third line
+        genes = []
+        for index, line in enumerate(file):
+            if index >= 2:
+                if 'CDS' in line:
+                    gene_str = line.strip().split('CDS')[-1].strip()
+                    direction = '+'
+                    if 'complement' in gene_str:
+                        direction = '-'
+                        # remove 'complement'
+                        gene_str = gene_str[len('complement'):]
+                        # remove ()
+                        gene_str = gene_str[1:-1]
+                    start, end = [int(x) for x in gene_str.split('.') if x.isnumeric()]
+                    # create gene
+                    genes.append(Gene(start, end, direction, identity=identity))
+
+        return genes
+
 
 def write_gene(gene, row, ws, indexes):
     """
@@ -694,7 +756,7 @@ def color_row(ws, row, color):
     :param row: row number
     :param color: openpyxl Fill profile
     """
-    row = ws['A' + str(row):'AI' + str(row)][0]
+    row = ws['A' + str(row):'AO' + str(row)][0]
     for cell in row:
         cell.fill = color
         cell.font = Font(color=colors.WHITE)
@@ -712,6 +774,9 @@ def excel_write(output_directory, files, sequence):
     ws = wb.active
     ws.title = 'Gene Calls'
 
+    # Annotation IDs
+    ids = ['GLIMMER', 'GM', 'HMM', 'GMS', 'GMS2', 'HEURISTIC']
+
     indexes = dict()
     indexes['GLIMMER'] = [['A', 'E'], 0]
     indexes['GM'] = [['G', 'K'], 0]
@@ -719,10 +784,12 @@ def excel_write(output_directory, files, sequence):
     indexes['GMS'] = [['S', 'W'], 0]
     indexes['GMS2'] = [['Y', 'AC'], 0]
     indexes['HEURISTIC'] = [['AE', 'AI'], 0]
+    indexes['PRODIGAL'] = [['AK', 'AO'], 0]
     headers_names = ['No.', 'Direction', 'Start', 'Stop', 'Length']
 
     # Row colors according to # of same genes
     colors = dict()
+    colors[7] = PatternFill(fgColor='215967', fill_type='solid')
     colors[6] = PatternFill(fgColor='215967', fill_type='solid')
     colors[5] = PatternFill(fgColor='31869b', fill_type='solid')
     colors[4] = PatternFill(fgColor='92cddc', fill_type='solid')
@@ -762,6 +829,8 @@ def excel_write(output_directory, files, sequence):
             genes += GeneParse.parse_genemarkS2(file, identity='GMS2')
         elif file_type == 'heuristic':
             genes += GeneParse.parse_genemarkHeuristic(file, identity='HEURISTIC')
+        elif file_type == 'prodigal':
+            genes += GeneParse.parse_prodigal(file, identity='PRODIGAL')
 
     total = sorted(genes, key=lambda x: x.start)
 
@@ -787,9 +856,9 @@ def excel_write(output_directory, files, sequence):
         write_gene(curr_gene, row, ws, indexes)
         count += 1
 
-        # apply color for last row
-        if genes_in_row > 1:
-            color_row(ws, row, colors[genes_in_row])
+    # apply color for last row
+    if genes_in_row > 1:
+        color_row(ws, row, colors[genes_in_row])
 
     # save file
     wb.save(output_directory + sequence.name + '.xlsx')
@@ -821,3 +890,4 @@ if __name__ == '__main__':
     if args.rm:
         for file in files:
             os.remove(file)
+
