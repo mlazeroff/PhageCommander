@@ -69,7 +69,7 @@ class GeneFile:
         self.file_info = {'file': (self.name, input_file_data, 'application/octet-stream')}
 
         # Gene species - Check if compatible type, if not, exit
-        if species not in SPECIES :
+        if species not in SPECIES:
             raise GeneFileError(
                 "{} is not a compatible species type - See species.txt".format(species))
         self.species = species
@@ -756,10 +756,16 @@ def color_row(ws, row, color):
     :param row: row number
     :param color: openpyxl Fill profile
     """
+    # Colors which need white font
+    need_white = {PatternFill(fgColor='215967', fill_type='solid'),
+                  PatternFill(fgColor='31869b', fill_type='solid'),
+                  PatternFill(fgColor='92cddc', fill_type='solid')}
+
     row = ws['A' + str(row):'AO' + str(row)][0]
     for cell in row:
         cell.fill = color
-        cell.font = Font(color=colors.WHITE)
+        if color in need_white:
+            cell.font = Font(color=colors.WHITE)
 
 
 def excel_write(output_directory, files, sequence):
@@ -795,8 +801,9 @@ def excel_write(output_directory, files, sequence):
     colors[4] = PatternFill(fgColor='92cddc', fill_type='solid')
     colors[3] = PatternFill(fgColor='b7dee8', fill_type='solid')
     colors[2] = PatternFill(fgColor='daeef3', fill_type='solid')
+    colors[1] = PatternFill(fgColor='ffffff', fill_type='solid')
 
-    # Format Columns
+    # Format Annotation Columns
     for x in indexes.items():
         value = x[1]
         first = ws[value[0][0] + str(1): value[0][1] + str(1)][0]
@@ -811,6 +818,14 @@ def excel_write(output_directory, files, sequence):
         for index, column in enumerate(second):
             column.value = headers_names[index]
             column.alignment = Alignment(horizontal='center')
+
+    # Format Statistics Columns
+    stat_row = ws['AQ1': 'AS1'][0]
+    stat_headers = ['SUM', 'ALL', 'ONE']
+    for index, cell in enumerate(stat_row):
+        cell.value = stat_headers[index]
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal='center')
 
     # get genes
     genes = []
@@ -844,9 +859,22 @@ def excel_write(output_directory, files, sequence):
         # print same genes on the same line, different ones on different lines
         if count != 0:
             if curr_gene != total[count - 1]:
-                # color previous row according to same # of genes
-                if genes_in_row > 1:
-                    color_row(ws, row, colors[genes_in_row])
+                # End of current row of genes
+                # update row color according to number of genes
+                color_row(ws, row, colors[genes_in_row])
+                # update stats of row
+                stat_row = ws['AQ' + str(row): 'AS' + str(row)][0]
+                # SUM
+                stat_row[0].value = genes_in_row
+                stat_row[0].alignment = Alignment(horizontal='center')
+                # ALL
+                if genes_in_row == len(indexes):
+                    stat_row[1].value = 'X'
+                    stat_row[1].alignment = Alignment(horizontal='center')
+                # ONE
+                if genes_in_row == 1:
+                    stat_row[2].value = 'X'
+                    stat_row[2].alignment = Alignment(horizontal='center')
                 # move to next row and reset genes count
                 row += 1
                 genes_in_row = 1
@@ -856,9 +884,21 @@ def excel_write(output_directory, files, sequence):
         write_gene(curr_gene, row, ws, indexes)
         count += 1
 
-    # apply color for last row
-    if genes_in_row > 1:
-        color_row(ws, row, colors[genes_in_row])
+    # apply color and stats for last row
+    color_row(ws, row, colors[genes_in_row])
+    # update stats of row
+    stat_row = ws['AQ' + str(row): 'AS' + str(row)][0]
+    # SUM
+    stat_row[0].value = genes_in_row
+    stat_row[0].alignment = Alignment(horizontal='center')
+    # ALL
+    if genes_in_row == len(indexes):
+        stat_row[1].value = 'X'
+        stat_row[1].alignment = Alignment(horizontal='center')
+    # ONE
+    if genes_in_row == 1:
+        stat_row[2].value = 'X'
+        stat_row[2].alignment = Alignment(horizontal='center')
 
     # save file
     wb.save(output_directory + sequence.name + '.xlsx')
@@ -890,4 +930,3 @@ if __name__ == '__main__':
     if args.rm:
         for file in files:
             os.remove(file)
-
