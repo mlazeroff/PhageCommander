@@ -365,7 +365,6 @@ class GeneFile:
             raise GeneFileError("Prodigal")
 
         # return file name
-        print(out)
         return out
 
     def query_all(self, output=''):

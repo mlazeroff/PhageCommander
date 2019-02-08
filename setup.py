@@ -9,7 +9,7 @@ setuptools.setup(
     description='Utilties for analyzing Fasta DNA Sequences with GeneMark/Glimmer',
     url='https://github.com/mlazeroff/GeneQuery',
     packages=['genequery'],
-    package_data={'genequery': 'species.txt'},
+    package_data={'genequery': ['species.txt', 'prodigal.windows.exe']},
     install_requires=['requests',
                       'beautifulsoup4',
                       'openpyxl'],
