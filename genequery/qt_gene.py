@@ -2,6 +2,8 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from genequery import Gene
+import os
+import time
 
 # list of tool calls
 TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal']
@@ -71,8 +73,12 @@ class ToolSpecies:
     """
     Class for representing tool/species selections
     """
+    # tools to call
     tools = {key: True for key in TOOL_NAMES}
+    # species of the DNA sequence
     species = ''
+    # name of the DNA file
+    fileName = ''
 
 
 class NewFileDialog(QDialog):
@@ -93,6 +99,7 @@ class NewFileDialog(QDialog):
         mainLayout = QVBoxLayout()
         checkBoxLayout = QGridLayout()
         speciesLayout = QHBoxLayout()
+        dnaFileLayout = QHBoxLayout()
         buttonLayout = QHBoxLayout()
 
         # label font
@@ -143,6 +150,13 @@ class NewFileDialog(QDialog):
         self.speciesComboBox.addItems(Gene.SPECIES)
         self.speciesComboBox.setMaximumWidth(200)
 
+        # dna file input
+        fileLabel = QLabel('Fasta File:')
+        fileLabel.setFont(labelFont)
+        self.fileEdit = QLineEdit()
+        fileButton = QPushButton('Open...')
+        fileButton.clicked.connect(self.openFileDialog)
+
         # buttons
         self.queryButton = QPushButton('Query')
         self.queryButton.clicked.connect(self.accept)
@@ -168,18 +182,25 @@ class NewFileDialog(QDialog):
         speciesLayout.addWidget(speciesLabel)
         speciesLayout.addWidget(self.speciesComboBox)
 
+        # file
+        dnaFileLayout.addWidget(self.fileEdit)
+        dnaFileLayout.addWidget(fileButton)
+
         # buttons
         buttonLayout.addWidget(self.queryButton)
         buttonLayout.addWidget(self.cancelButton)
 
         mainLayout.addLayout(checkBoxLayout)
         mainLayout.addLayout(speciesLayout)
+        mainLayout.addWidget(fileLabel)
+        mainLayout.addLayout(dnaFileLayout)
         mainLayout.addLayout(buttonLayout)
 
         # Dialog Settings --------------------------------------------------------------------------
         self.setLayout(mainLayout)
         self.setWindowTitle('Select Query Tools')
         self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.MSWindowsFixedSizeDialogHint)
+
 
     @pyqtSlot()
     def accept(self):
@@ -190,8 +211,29 @@ class NewFileDialog(QDialog):
         for key in self.toolCalls.tools.keys():
             self.toolCalls.tools[key] = self.toolCheckBoxes[key].isChecked()
 
+        # check if no tools were selected
+        if True not in self.toolCalls.tools.values():
+            QMessageBox.warning(self, 'Please select a tool',
+                                'No tools are selected. Please choose at least one.')
+            return
+
         # update species
         self.toolCalls.species = self.speciesComboBox.currentText()
+
+        # check if dna file was given
+        if self.fileEdit.text() == '':
+            QMessageBox.warning(self, 'Missing DNA File',
+                                'Please provide a fasta DNA file.')
+            return
+
+        # check if file exists
+        if not os.path.isfile(self.fileEdit.text()):
+            QMessageBox.warning(self, 'File Does not Exist',
+                                'Selected DNA file does not exist.')
+            return
+
+        # update return values
+        self.toolCalls.fileName = self.fileEdit.text()
 
         QDialog.accept(self)
 
@@ -201,6 +243,99 @@ class NewFileDialog(QDialog):
         On Clicking "Cancel"
         """
         QDialog.reject(self)
+
+    def openFileDialog(self):
+        """
+        Open a dialog for user to select DNA file
+        """
+        file = QFileDialog.getOpenFileName(self, 'Open DNA File')
+
+        # if file was chosen, set file line edit
+        if file[0]:
+            self.fileEdit.setText(file[0])
+
+
+class SampleThread(QThread):
+    incrementSig = pyqtSignal()
+
+    def __init__(self, num):
+        QThread.__init__(self)
+        self.num = num
+        self.abort = False
+
+    def run(self):
+        index = 0
+        while index <= self.num and not self.abort:
+            index += 1
+            self.incrementSig.emit()
+            time.sleep(2)
+
+    def __del__(self):
+        self.wait()
+
+    @pyqtSlot()
+    def abortThread(self):
+        self.abort = True
+
+
+class QueryThread(QThread):
+    """
+    Thread for calling Gene prediction tools
+    """
+
+    def __init__(self, toolCalls):
+        super(QueryThread, self).__init__()
+
+
+class QueryDialog(QDialog):
+    """
+    Dialog for querying prediction tools
+    """
+
+    def __init__(self, toolCalls, parent=None):
+        super(QueryDialog, self).__init__(parent)
+
+        self.toolCalls = toolCalls
+
+        # identify tools for calling
+        tools = [tool for tool in toolCalls.tools if toolCalls.tools[tool] is True]
+        print(tools)
+
+        mainLayout = QVBoxLayout()
+        # WIDGETS ----------------------------------------------------------------------------------
+        self.thread = SampleThread(len(tools))
+        self.thread.incrementSig.connect(
+            lambda: self.progressBar.setValue(self.progressBar.value() + 1))
+        self.thread.finished.connect(self.queryStop)
+
+        self.progressBar = QProgressBar()
+        self.progressBar.setMaximum(len(tools))
+
+        self.cancelButton = QPushButton('Cancel')
+        self.cancelButton.clicked.connect(self.thread.abortThread)
+
+        # WIDGET LAYOUT ----------------------------------------------------------------------------
+        mainLayout.addWidget(self.progressBar)
+        mainLayout.addWidget(self.cancelButton)
+        self.setLayout(mainLayout)
+
+        # SETTINGS ---------------------------------------------------------------------------------
+        self.setWindowFlags(Qt.WindowTitleHint)
+        self.setWindowTitle('Querying Tools...')
+
+        self.progressBar.setValue(0)
+        self.thread.start()
+
+    def queryStop(self):
+        """
+        Called when query thread stops - whether by finishing or user pressing cancel
+        """
+        # if successful query - display success message
+        if self.progressBar.value() == self.progressBar.maximum():
+            QMessageBox.information(self, 'Done', 'Done! Query Successful')
+            QDialog.accept(self)
+        else:
+            QDialog.reject(self)
 
 
 class GeneMain(QMainWindow):
@@ -242,16 +377,21 @@ class GeneMain(QMainWindow):
     @pyqtSlot()
     def fileNew(self):
         dialog = NewFileDialog(self.toolCalls)
+        # if user initiates a query
         if dialog.exec_():
-            """
-            User initiated query
-            """
             print(self.toolCalls.tools)
             print(self.toolCalls.species)
+            print(self.toolCalls.fileName)
+            queryDialog = QueryDialog(self.toolCalls)
+            # query to tools is successful
+            if queryDialog.exec_():
+                pass
+            # query was canceld by user
+            else:
+                pass
+
+        # user does not initiate query
         else:
-            """
-            User canceled query
-            """
             pass
 
     # HELPER METHODS -------------------------------------------------------------------------------

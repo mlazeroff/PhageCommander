@@ -24,6 +24,9 @@ GLIMMER_DOMAIN = 'http://18.220.233.194/glimmer'
 # species
 SPECIES = [x.strip() for x in open(os.path.split(__file__)[0] + '/species.txt', 'r')]
 
+# tools
+TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer']
+
 
 class Error(Exception):
     """
@@ -74,7 +77,10 @@ class GeneFile:
                 "{} is not a compatible species type - See species.txt".format(species))
         self.species = species
 
-    def glimmer_query(self, out=''):
+        # dictionary for storing query outputs
+        self.query_data = {tool: '' for tool in TOOLS}
+
+    def glimmer_query(self):
         """
         Queries Glimmer for DNA sequence and writes content to file
         :param out: optional output file name
@@ -117,18 +123,9 @@ class GeneFile:
             raise GeneFileError(
                 'Glimmer Server Error: Check for DNA for proper format or check server status')
 
-        # write data to file
-        if out != '':
-            output = out
-        else:
-            output = self.name + '.glimmer'
-        glimmer_output = open(output, 'wb')
-        glimmer_output.write(return_post.content)
+        self.query_data['glimmer'] = return_post.content.decode('utf-8')
 
-        # return file name
-        return output
-
-    def genemark_query(self, out=''):
+    def genemark_query(self):
         """
         Query to GeneMark
         :param out: optional output file name
@@ -158,20 +155,21 @@ class GeneFile:
         except GeneFileError:
             raise
 
+
         # write gm response to file
-        if out != '':
-            output = out
-        else:
-            output = self.name + '.gm'
-        gm_output = open(output, 'wb')
+        # if out != '':
+        #     output = out
+        # else:
+        #     output = self.name + '.gm'
+        # gm_output = open(output, 'wb')
         getGMFile = requests.get(FILE_DOMAIN + file_location)
         getGMFile.raise_for_status()
-        gm_output.write(getGMFile.content)
+        # gm_output.write(getGMFile.content)
 
-        return output
+        self.query_data['gm'] = getGMFile.content.decode('utf-8')
         # End GeneMark Lookup -------------------------------------------------------
 
-    def genemarkhmm_query(self, out=''):
+    def genemarkhmm_query(self):
         """
         Query GeneMark Hmm
         :param out: optional output file name
@@ -201,20 +199,13 @@ class GeneFile:
                 raise GeneFileError("GeneMark Hmm")
         except GeneFileError:
             raise
-        # write response to file
-        if out != '':
-            output = out
-        else:
-            output = self.name + '.gmhmm'
-        gmhmm_output = open(output, 'wb')
+
         getHmmFile = requests.get(FILE_DOMAIN + file_location)
         getHmmFile.raise_for_status()
-        gmhmm_output.write(getHmmFile.content)
-
-        return output
+        self.query_data['hmm'] = getHmmFile.content.decode('utf-8')
         # End GeneMark Hmm Lookup --------------------------------------------------
 
-    def genemarks_query(self, out=''):
+    def genemarks_query(self):
         """
         Query GeneMarkS
         :param out: optional output file name
@@ -244,19 +235,17 @@ class GeneFile:
             raise
 
         # write response to file
-        if out != '':
-            output = out
-        else:
-            output = self.name + '.gms'
-        gms_output = open(output, 'wb')
+        # if out != '':
+        #     output = out
+        # else:
+        #     output = self.name + '.gms'
+        # gms_output = open(output, 'wb')
         getGmsFile = requests.get(FILE_DOMAIN + file_location)
         getGmsFile.raise_for_status()
-        gms_output.write(getGmsFile.content)
-
-        return output
+        self.query_data['gms'] = getGmsFile.content.decode('utf-8')
         # End GeneMarkS Lookup -----------------------------------------------------
 
-    def genemark_heuristic_query(self, out=''):
+    def genemark_heuristic_query(self):
         """
         Query GeneMark Heuristic
         :param out: optional output file name
@@ -288,20 +277,12 @@ class GeneFile:
         except GeneFileError:
             raise
 
-        # write response to file
-        if out != '':
-            output = out
-        else:
-            output = self.name + '.heuristic'
-        heuristic_output = open(output, 'wb')
         getHeuristicFile = requests.get(FILE_DOMAIN + file_location)
         getHeuristicFile.raise_for_status()
-        heuristic_output.write(getHeuristicFile.content)
-
-        return output
+        self.query_data['heuristic'] = getHeuristicFile.content.decode('utf-8')
         # End GeneMark Heuristic Lookup -------------------------------------------
 
-    def genemarks2_query(self, out=''):
+    def genemarks2_query(self):
         """
         Query GeneMarkS2
         :param out: optional output file name
@@ -330,20 +311,12 @@ class GeneFile:
         except GeneFileError:
             raise
 
-        # write response to file
-        if out != '':
-            output = out
-        else:
-            output = self.name + '.gms2'
-        gms2_output = open(output, 'wb')
         getGMS2File = requests.get(FILE_DOMAIN + file_location)
         getGMS2File.raise_for_status()
-        gms2_output.write(getGMS2File.content)
-
-        return output
+        self.query_data['gms2'] = getGMS2File.content.decode('utf-8')
         # End GeneMarkS2 Lookup --------------------------------------------------
 
-    def prodigal_query(self, out=''):
+    def prodigal_query(self):
         """
         Calls prodigal to analyze file
         :param out: optional output file name
@@ -351,11 +324,9 @@ class GeneFile:
         """
         # get path for prodigal exe
         exe_location = os.path.split(os.path.abspath(__file__))[0] + '/prodigal.windows.exe'
-        if out == '':
-            out = '{}.prodigal'.format(self.name)
 
         # generate prodigal command and run
-        cmd = '{} -i \"{}\" -p meta -o \"{}\"'.format(exe_location, self.full, out)
+        cmd = '{} -i \"{}\" -p meta'.format(exe_location, self.full)
         proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
         stdout, stderr = proc.communicate()
 
@@ -364,11 +335,9 @@ class GeneFile:
             print(stderr)
             raise GeneFileError("Prodigal")
 
-        # return file name
-        print(out)
-        return out
+        self.query_data['prodigal'] = stdout.decode('utf-8')
 
-    def query_all(self, output=''):
+    def query_all(self):
         """
         Query: Glimmer, GeneMark, GeneMarkHmm, GeneMarkS, GeneMarkS2, and GeneMark Heuristic
         :output: optional output directory, otherwise outputs to GeneFile directory
@@ -499,120 +468,123 @@ class GeneParse:
     All methods are static
     """
 
+
     @staticmethod
-    def parse_glimmer(glimmer_file, identity=''):
+    def parse_glimmer(glimmer_data, identity=''):
         """
-        Parse Glimmer output file for Genes
-        :param glimmer_file: Glimmer output file
-        :param identity: optional identifier for each Gene
-        :return: list of Genes in file order
+        Parses the output of a glimmer query for gene predictions
+        :param glimmer_data: string representing glimmer query output
+        :param identity: optional identifier for each gene
+        :return: list of Genes in numerical order
         """
-
-        file = open(glimmer_file, 'r')
-
-        # skip first line
-        curr_line = file.readline()
+        # split text into lines - skipping first line
+        data = glimmer_data.splitlines()[1:]
 
         # Get Gene data
         genes = []
-        curr_line = file.readline()
-        while 'html' not in curr_line:
-            data = [x for x in curr_line.split(' ') if x != '']
-            # get gene direction and create Gene
-            if '+' in data[3]:
-                genes.append(Gene(data[1], data[2], '+', identity=identity))
-            else:
-                genes.append(Gene(data[2], data[1], '-', identity=identity))
-
-            # grab next line
-            curr_line = file.readline()
+        for line in data:
+            if 'html' not in line:
+                data = [x for x in line.split(' ') if x != '']
+                # get gene direction and create Gene
+                if '+' in data[3]:
+                    genes.append(Gene(data[1], data[2], '+', identity=identity))
+                else:
+                    genes.append(Gene(data[2], data[1], '-', identity=identity))
 
         # return list of Genes
         return genes
 
     @staticmethod
-    def parse_genemark(gm_file, identity=''):
+    def parse_genemark(gm_data, identity=''):
         """
         Parse GeneMark output file for Genes
         :param gm_file: GeneMark output file
         :param identity: optional identifier for each Gene
         :return: list of Genes in file order
         """
-        file = open(gm_file, 'r')
+        gm_data = gm_data.splitlines()
 
-        # Skip until Regions of Interests
-        curr_line = file.readline()
-        while (' LEnd      REnd    Strand      Frame' not in curr_line):
-            curr_line = file.readline()
-            if curr_line == '':  # if file was empty
-                return []
+        # skip until Region of Interests section
+        index = 0
+        for ind, line in enumerate(gm_data):
+            if ' LEnd      REnd    Strand      Frame' in line:
+                index = ind
+                break
 
-        # read blank line
-        curr_line = file.readlines(2)
+        # invalid file format
+        if index == len(gm_data) - 1:
+            raise GeneError('Invalid Genemark file format')
+
+        # go to first gene
+        gm_data = gm_data[index + 2:]
 
         # Get gene data
-        curr_line = file.readline()
         genes = []
-        while curr_line != '\n':
-            data = [x for x in curr_line.strip().split(' ') if x != '']
-            # check gene orientation
-            if data[2] == 'direct':
-                direction = '+'
+        for line in gm_data:
+            if line != '':
+                data = [x for x in line.strip().split(' ') if x != '']
+                # check gene orientation
+                if data[2] == 'direct':
+                    direction = '+'
+                else:
+                    direction = '-'
+                # add to list
+                genes.append(Gene(data[0], data[1], direction, identity=identity))
             else:
-                direction = '-'
-            # add to list
-            genes.append(Gene(data[0], data[1], direction, identity=identity))
-            curr_line = file.readline()
+                break
 
         return genes
 
     @staticmethod
-    def parse_genemarkS(s_file, identity=''):
+    def parse_genemarkS(gms_data, identity=''):
         """
         Parse GeneMarkS file for Gene data
         :param s_file: GeneMarkS file
         :param identity: optional identifier for each Gene
         :return: list of Genes in file order
         """
-        file = open(s_file, 'r')
+        gms_data = gms_data.splitlines()
 
         # begin parse
-        current_line = file.readline()
+        current_line = gms_data[0]
         # Check if proper GeneMark file
         try:
             if 'GeneMark.hmm' not in current_line:
-                raise GeneError("Hmm: Not a valid GeneMark Hmm file")
+                raise GeneError("GMS: Not a valid GeneMark GMS file")
         except GeneError:
             raise
 
         # skip through until gene data
-        while ('Gene    Strand    LeftEnd    RightEnd       Gene     Class' not in current_line):
-            current_line = file.readline()
-        current_line = file.readline()  # read blank line
+        index = 0
+        for ind, current_line in enumerate(gms_data[1:]):
+            if 'Gene    Strand    LeftEnd    RightEnd       Gene     Class' in current_line:
+                index = ind
+                break
 
-        # arary for gene objs
+        gms_data = gms_data[index + 3:]
+
+        # array for gene objs
         genes = []
         # get gene data
-        current_line = file.readline()
-        while current_line != '\n':
-            data = [x for x in current_line.strip().split(' ') if x != '']
-            genes.append(Gene(data[2], data[3], data[1], identity=identity))
-            current_line = file.readline()
+        for current_line in gms_data:
+            if current_line != '':
+                data = [x for x in current_line.strip().split(' ') if x != '']
+                genes.append(Gene(data[2], data[3], data[1], identity=identity))
 
         return genes
 
     @staticmethod
-    def parse_genemarkHmm(hmm_file, identity=''):
+    def parse_genemarkHmm(hmm_data, identity=''):
         """
         Parse GeneMark Hmm file for Gene data
         :param hmm_file:
         :param identity: optional identifier for each Gene
         :return: list of Genes in file order
         """
-        file = open(hmm_file, 'r')
+        hmm_data = hmm_data.splitlines()
 
         # begin parse
-        current_line = file.readline()
+        current_line = hmm_data[0]
         # Check if proper GeneMark file
         try:
             if 'GeneMark.hmm' not in current_line:
@@ -621,33 +593,37 @@ class GeneParse:
             raise
 
         # skip through until gene data
-        while ('Gene    Strand    LeftEnd    RightEnd       Gene     Class' not in current_line):
-            current_line = file.readline()
-        current_line = file.readline()  # read blank line
+        # while ('Gene    Strand    LeftEnd    RightEnd       Gene     Class' not in current_line):
+        #     current_line = file.readline()
+        # current_line = file.readline()  # read blank line
+        index = 0
+        for ind, current_line in enumerate(hmm_data[1:]):
+            if 'Gene    Strand    LeftEnd    RightEnd       Gene     Class' in current_line:
+                index = ind
+                break
+        hmm_data = hmm_data[index + 3:]
 
-        # arary for gene objs
+        # array for gene objs
         genes = []
         # get gene data
-        current_line = file.readline()
-        while current_line != '\n':
-            data = [x for x in current_line.strip().split(' ') if x != '']
-            genes.append(Gene(data[2], data[3], data[1], identity=identity))
-            current_line = file.readline()
+        for current_line in hmm_data:
+            if current_line != '':
+                data = [x for x in current_line.strip().split(' ') if x != '']
+                genes.append(Gene(data[2], data[3], data[1], identity=identity))
 
         return genes
 
     @staticmethod
-    def parse_genemarkHeuristic(heuristic_file, identity=''):
+    def parse_genemarkHeuristic(heuristic_data, identity=''):
         """
         Parse GeneMark Heuristic file for Gene data
         :param heuristic_file: GeneMark Heuristic output file
         :param identity: optional identifier for each Gene
         :return: list of Genes in order
         """
-        file = open(heuristic_file, 'r')
-
+        heuristic_data = heuristic_data.splitlines()
         # begin parse
-        current_line = file.readline()
+        current_line = heuristic_data[0]
         # Check if proper GeneMark file
         try:
             if 'GeneMark.hmm' not in current_line:
@@ -656,59 +632,72 @@ class GeneParse:
             raise
 
         # skip through until gene data
-        while ('Gene    Strand    LeftEnd    RightEnd       Gene     Class' not in current_line):
-            current_line = file.readline()
-        current_line = file.readline()  # read blank line
+        index = 0
+        for ind, current_line in enumerate(heuristic_data[1:]):
+            if 'Gene    Strand    LeftEnd    RightEnd       Gene     Class' in current_line:
+                index = ind
+                break
+
+        heuristic_data = heuristic_data[index + 3:]
 
         # arary for gene objs
         genes = []
         # get gene data
-        current_line = file.readline()
-        while current_line != '\n':
-            data = [x for x in current_line.strip().split(' ') if x != '']
-            genes.append(Gene(data[2], data[3], data[1], identity=identity))
-            current_line = file.readline()
+        for current_line in heuristic_data:
+            if current_line != '':
+                data = [x for x in current_line.strip().split(' ') if x != '']
+                print(data)
+                genes.append(Gene(data[2], data[3], data[1], identity=identity))
 
         return genes
 
     @staticmethod
-    def parse_genemarkS2(s2_file, identity=''):
+    def parse_genemarkS2(gms2_data, identity=''):
         """
         Parse GeneMark S2 file for Gene data
         :param s2_file: GeneMark S2 output file
         :param identity: optional identifier for each Gene
         :return: list of Genes in file order
         """
-        file = open(s2_file, 'r')
+        gms2_data = gms2_data.splitlines()
 
         # skip until gene data
-        curr_line = file.readline()
-        while ('SequenceID' not in curr_line):
-            curr_line = file.readline()
+        # curr_line = file.readline()
+        # while ('SequenceID' not in curr_line):
+        #     curr_line = file.readline()
+
+        index = 0
+        for ind, line in enumerate(gms2_data):
+            if 'SequenceID' in line:
+                index = ind
+                break
+        gms2_data = gms2_data[index + 1:]
 
         # Get gene data
         genes = []
-        curr_line = file.readline()
-        while curr_line != '\n':
-            data = [x for x in curr_line.strip().split(' ') if x != '']
-            genes.append(Gene(data[2], data[3], data[1], identity=identity))
-            curr_line = file.readline()
+        for curr_line in gms2_data:
+            if curr_line != '':
+                data = [x for x in curr_line.strip().split(' ') if x != '']
+                genes.append(Gene(data[2], data[3], data[1], identity=identity))
+            # stop at newline after genes
+            else:
+                break
 
         return genes
 
     @staticmethod
-    def parse_prodigal(prodigal_file, identity=''):
+    def parse_prodigal(prodigal_data, identity=''):
         """
         Parse prodigal output file for Gene information
         :param prodigal_file: prodigal output file
         :param identity: optional identifier for Gene
         :return: list of Genes in file order
         """
-        file = open(prodigal_file, 'r')
+        prodigal_data = prodigal_data.splitlines()
 
         # gene info starts on third line
         genes = []
-        for index, line in enumerate(file):
+        for index, line in enumerate(prodigal_data):
             if index >= 2:
                 if 'CDS' in line:
                     gene_str = line.strip().split('CDS')[-1].strip()
