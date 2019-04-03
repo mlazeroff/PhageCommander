@@ -646,7 +646,6 @@ class GeneParse:
         for current_line in heuristic_data:
             if current_line != '':
                 data = [x for x in current_line.strip().split(' ') if x != '']
-                print(data)
                 genes.append(Gene(data[2], data[3], data[1], identity=identity))
 
         return genes

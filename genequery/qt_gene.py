@@ -8,6 +8,23 @@ import time
 # list of tool calls
 TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal']
 
+# mappings of tool names to appropriate methods
+# [queryMethod, parseMethod]
+TOOL_METHODS = {'gm': [Gene.GeneFile.genemark_query,
+                       Gene.GeneParse.parse_genemark],
+                'hmm': [Gene.GeneFile.genemarkhmm_query,
+                        Gene.GeneParse.parse_genemarkHmm],
+                'heuristic': [Gene.GeneFile.genemark_heuristic_query,
+                              Gene.GeneParse.parse_genemarkHeuristic],
+                'gms': [Gene.GeneFile.genemarks_query,
+                        Gene.GeneParse.parse_genemarkS],
+                'gms2': [Gene.GeneFile.genemarks2_query,
+                         Gene.GeneParse.parse_genemarkS2],
+                'glimmer': [Gene.GeneFile.glimmer_query,
+                            Gene.GeneParse.parse_glimmer],
+                'prodigal': [Gene.GeneFile.prodigal_query,
+                             Gene.GeneParse.parse_prodigal]}
+
 
 class SettingsDialog(QDialog):
     """
@@ -69,7 +86,7 @@ class SettingsDialog(QDialog):
         self.setLayout(layout)
 
 
-class ToolSpecies:
+class QueryData:
     """
     Class for representing tool/species selections
     """
@@ -77,8 +94,10 @@ class ToolSpecies:
     tools = {key: True for key in TOOL_NAMES}
     # species of the DNA sequence
     species = ''
-    # name of the DNA file
+    # path of the DNA file
     fileName = ''
+    # tool data
+    toolData = dict()
 
 
 class NewFileDialog(QDialog):
@@ -94,7 +113,7 @@ class NewFileDialog(QDialog):
         :param parent: parent widget
         """
         super(NewFileDialog, self).__init__(parent)
-        self.toolCalls = tools
+        self.queryData = tools
 
         mainLayout = QVBoxLayout()
         checkBoxLayout = QGridLayout()
@@ -111,27 +130,27 @@ class NewFileDialog(QDialog):
         genemarkLabel = QLabel('Genemark')
         genemarkLabel.setFont(labelFont)
         gmBox = QCheckBox('Genemark')
-        gmBox.setChecked(self.toolCalls.tools['gm'])
+        gmBox.setChecked(self.queryData.tools['gm'])
         hmmBox = QCheckBox('HMM')
-        hmmBox.setChecked(self.toolCalls.tools['hmm'])
+        hmmBox.setChecked(self.queryData.tools['hmm'])
         heuristicBox = QCheckBox('Heuristic')
-        heuristicBox.setChecked(self.toolCalls.tools['heuristic'])
+        heuristicBox.setChecked(self.queryData.tools['heuristic'])
         gmsBox = QCheckBox('GMS')
-        gmsBox.setChecked(self.toolCalls.tools['gms'])
+        gmsBox.setChecked(self.queryData.tools['gms'])
         gms2Box = QCheckBox('GMS2')
-        gms2Box.setChecked(self.toolCalls.tools['gms2'])
+        gms2Box.setChecked(self.queryData.tools['gms2'])
 
         # glimmer box
         glimmerLabel = QLabel('Glimmer')
         glimmerLabel.setFont(labelFont)
         glimmerBox = QCheckBox('Glimmer')
-        glimmerBox.setChecked(self.toolCalls.tools['glimmer'])
+        glimmerBox.setChecked(self.queryData.tools['glimmer'])
 
         # prodigal box
         prodigalLabel = QLabel('Prodigal')
         prodigalLabel.setFont(labelFont)
         prodigalBox = QCheckBox('Prodigal')
-        prodigalBox.setChecked(self.toolCalls.tools['prodigal'])
+        prodigalBox.setChecked(self.queryData.tools['prodigal'])
 
         # dictionary mapping tools to checkboxes
         self.toolCheckBoxes = dict()
@@ -201,24 +220,25 @@ class NewFileDialog(QDialog):
         self.setWindowTitle('Select Query Tools')
         self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.MSWindowsFixedSizeDialogHint)
 
-
     @pyqtSlot()
     def accept(self):
         """
         On Clicking "Query"
         """
-        # update tool calls based on user selection
-        for key in self.toolCalls.tools.keys():
-            self.toolCalls.tools[key] = self.toolCheckBoxes[key].isChecked()
+        # update tool calls based on user selection + allocates entry in toolData
+        for key in self.queryData.tools.keys():
+            self.queryData.tools[key] = self.toolCheckBoxes[key].isChecked()
+            if self.queryData.tools[key] is True:
+                self.queryData.toolData[key] = None
 
         # check if no tools were selected
-        if True not in self.toolCalls.tools.values():
+        if True not in self.queryData.tools.values():
             QMessageBox.warning(self, 'Please select a tool',
                                 'No tools are selected. Please choose at least one.')
             return
 
         # update species
-        self.toolCalls.species = self.speciesComboBox.currentText()
+        self.queryData.species = self.speciesComboBox.currentText()
 
         # check if dna file was given
         if self.fileEdit.text() == '':
@@ -233,7 +253,7 @@ class NewFileDialog(QDialog):
             return
 
         # update return values
-        self.toolCalls.fileName = self.fileEdit.text()
+        self.queryData.fileName = self.fileEdit.text()
 
         QDialog.accept(self)
 
@@ -271,7 +291,8 @@ class SampleThread(QThread):
             time.sleep(2)
 
     def __del__(self):
-        self.wait()
+        # self.wait()
+        print('hi im about to be deleted')
 
     @pyqtSlot()
     def abortThread(self):
@@ -280,11 +301,99 @@ class SampleThread(QThread):
 
 class QueryThread(QThread):
     """
-    Thread for calling Gene prediction tools
+    Thread for making performing the call to a gene prediction tool and parsing the data
+    Returns the list of Genes via reference
     """
 
-    def __init__(self, toolCalls):
+    def __init__(self, geneFile, tool, queryData):
+        """
+        Constructor
+        :param geneFile: GeneFile object of DNA file
+        :param tool: tool to call
+            * See TOOL_NAMES global
+        :param geneData:
+        """
         super(QueryThread, self).__init__()
+
+        self.tool = tool
+        self.queryData = queryData
+        self.geneFile = geneFile
+
+    def run(self):
+        """
+        Performs the query of the gene prediction tool and parses the output data
+        :return: a list of Genes is returned through self.geneData
+        """
+        queryMethod = TOOL_METHODS[self.tool][0]
+        parseMethod = TOOL_METHODS[self.tool][1]
+
+        # perform query
+        # if query is unsuccessful, return the error instead
+        try:
+            queryMethod(self.geneFile)
+        except Exception as e:
+            self.queryData.toolData[self.tool] = e
+            return
+
+        # perform parsing of data
+        try:
+            genes = parseMethod(self.geneFile.query_data[self.tool])
+        except Exception as e:
+            self.queryData.toolData[self.tool] = e
+            return
+
+        # update query object with genes
+        self.queryData.toolData[self.tool] = genes
+
+
+class QueryManager(QThread):
+    """
+    Thread for managing gene prediction tool calls
+    """
+    # signal emitted each time a querying thread returns
+    progressSig = pyqtSignal()
+
+    def __init__(self, queryData):
+        """
+        Initializes and starts threads for each tool to be called
+        :param queryData: QueryData object
+        :param filePath: path to the DNA fasta file
+            * file should be checked to exist prior
+        """
+        super(QueryManager, self).__init__()
+
+        # VARIABLES --------------------------------------------------------------------------------
+        self.queryData = queryData
+
+        # create GeneFile
+        self.geneFile = Gene.GeneFile(self.queryData.fileName, self.queryData.species)
+
+        # THREAD ALLOCATIONS -----------------------------------------------------------------------
+        self.threads = []
+        for tool in self.queryData.tools:
+            if self.queryData.tools[tool] is True:
+                self.threads.append(QueryThread(self.geneFile, tool, self.queryData))
+
+        for thread in self.threads:
+            thread.finished.connect(self.queryReturn)
+
+        for thread in self.threads:
+            thread.start()
+
+    @pyqtSlot()
+    def queryReturn(self):
+        # emit progressSig to update progressBar
+        self.progressSig.emit()
+
+        # keep waiting until all calls have returned
+        for tool in self.queryData.toolData:
+            if self.queryData.toolData[tool] is None:
+                return
+
+        self.exit()
+
+    def abort(self):
+        self.exit()
 
 
 class QueryDialog(QDialog):
@@ -292,27 +401,24 @@ class QueryDialog(QDialog):
     Dialog for querying prediction tools
     """
 
-    def __init__(self, toolCalls, parent=None):
+    def __init__(self, queryData, parent=None):
         super(QueryDialog, self).__init__(parent)
 
-        self.toolCalls = toolCalls
-
-        # identify tools for calling
-        tools = [tool for tool in toolCalls.tools if toolCalls.tools[tool] is True]
-        print(tools)
+        self.queryData = queryData
 
         mainLayout = QVBoxLayout()
         # WIDGETS ----------------------------------------------------------------------------------
-        self.thread = SampleThread(len(tools))
-        self.thread.incrementSig.connect(
-            lambda: self.progressBar.setValue(self.progressBar.value() + 1))
+        self.thread = QueryManager(queryData)
         self.thread.finished.connect(self.queryStop)
+        self.thread.progressSig.connect(self.updateProgress)
 
         self.progressBar = QProgressBar()
-        self.progressBar.setMaximum(len(tools))
+        # set progress max to the amount of tools to be queried
+        print(self.queryData.tools)
+        self.progressBar.setMaximum(list(self.queryData.tools.values()).count(True))
 
         self.cancelButton = QPushButton('Cancel')
-        self.cancelButton.clicked.connect(self.thread.abortThread)
+        self.cancelButton.clicked.connect(self.thread.abort)
 
         # WIDGET LAYOUT ----------------------------------------------------------------------------
         mainLayout.addWidget(self.progressBar)
@@ -326,6 +432,12 @@ class QueryDialog(QDialog):
         self.progressBar.setValue(0)
         self.thread.start()
 
+    def updateProgress(self):
+        """
+        Increment the progress bar by one
+        """
+        self.progressBar.setValue(self.progressBar.value() + 1)
+
     def queryStop(self):
         """
         Called when query thread stops - whether by finishing or user pressing cancel
@@ -333,6 +445,7 @@ class QueryDialog(QDialog):
         # if successful query - display success message
         if self.progressBar.value() == self.progressBar.maximum():
             QMessageBox.information(self, 'Done', 'Done! Query Successful')
+            print(self.queryData.toolData)
             QDialog.accept(self)
         else:
             QDialog.reject(self)
@@ -368,7 +481,7 @@ class GeneMain(QMainWindow):
         self.fileMenu.addActions(self.fileMenuActions)
 
         # VARIABLES --------------------------------------------------------------------------------
-        self.toolCalls = ToolSpecies()
+        self.queryData = QueryData()
 
         # SETTINGS ---------------------------------------------------------------------------------
         self.setWindowTitle('GeneQuery')
@@ -376,17 +489,14 @@ class GeneMain(QMainWindow):
     # ACTION METHODS -------------------------------------------------------------------------------
     @pyqtSlot()
     def fileNew(self):
-        dialog = NewFileDialog(self.toolCalls)
+        dialog = NewFileDialog(self.queryData)
         # if user initiates a query
         if dialog.exec_():
-            print(self.toolCalls.tools)
-            print(self.toolCalls.species)
-            print(self.toolCalls.fileName)
-            queryDialog = QueryDialog(self.toolCalls)
+            queryDialog = QueryDialog(self.queryData)
             # query to tools is successful
             if queryDialog.exec_():
                 pass
-            # query was canceld by user
+            # query was canceled by user
             else:
                 pass
 
