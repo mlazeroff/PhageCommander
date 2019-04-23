@@ -1,9 +1,103 @@
+"""
+class Dialog(QDialog):
+    def __init__(self, parent=None):
+        super(Dialog, self).__init__(parent)
+
+        file = open('nihil_data', 'rb')
+        self.gene_data = pickle.load(file)
+        self.genes = []
+        for tool in self.gene_data.toolData:
+            self.genes += self.gene_data.toolData[tool]
+        self.tableWid = QTableWidget()
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.tableWid)
+        self.setLayout(layout)
+
+        self.updateTab()
+
+    def sort_genes(self, gene):
+        if gene.direction == '+':
+            return gene.stop
+        else:
+            return gene.start
+
+    def updateTab(self):
+        # sort genes
+        self.genes = sorted(self.genes, key=self.sort_genes)
+
+        # calculate column size
+        toolNumber = len(self.gene_data.toolData.keys())
+        columns = toolNumber * 4 + toolNumber - 1
+        self.tableWid.setColumnCount(columns)
+        # generate headers
+        headerIndexes  = dict()
+        currIndex = 0
+        headers = []
+        for ind, tool in enumerate(self.gene_data.toolData.keys()):
+            headerIndexes[tool] = currIndex
+            for i in range(4):
+                currIndex += 1
+                headers.append(tool.upper())
+            if ind != toolNumber - 1:
+                headers.append('')
+                currIndex += 1
+        # set headers
+        self.tableWid.setHorizontalHeaderLabels(headers)
+
+        # populate table
+        # insert first gene
+        currentRow = 0
+        self.tableWid.insertRow(currentRow)
+        previousGene = self.genes[0]
+        currentGeneCount = 1
+        geneIndex = headerIndexes[previousGene.identity]
+        self.tableWid.setItem(currentRow, geneIndex, QTableWidgetItem(previousGene.direction))
+        self.tableWid.setItem(currentRow, geneIndex + 1, QTableWidgetItem(str(previousGene.start)))
+        self.tableWid.setItem(currentRow, geneIndex + 2, QTableWidgetItem(str(previousGene.stop)))
+        self.tableWid.setItem(currentRow, geneIndex + 3, QTableWidgetItem(str(previousGene.length)))
+
+        # insert rest of genes
+        for gene in self.genes[1:]:
+            geneIndex = headerIndexes[gene.identity]
+
+            # same gene - add to current row
+            if gene == previousGene:
+                currentGeneCount += 1
+            # different gene - create new row
+            else:
+                currentGeneCount = 1
+                currentRow += 1
+                self.tableWid.insertRow(currentRow)
+
+            # add to table
+            self.tableWid.setItem(currentRow, geneIndex, QTableWidgetItem(gene.direction))
+            self.tableWid.setItem(currentRow, geneIndex + 1, QTableWidgetItem(str(gene.start)))
+            self.tableWid.setItem(currentRow, geneIndex + 2, QTableWidgetItem(str(gene.stop)))
+            self.tableWid.setItem(currentRow, geneIndex + 3, QTableWidgetItem(str(gene.length)))
+
+            # set gene to compare next against
+            previousGene = gene
+
+
+if __name__ == '__main__':
+    app = QApplication([])
+    window = Dialog()
+    window.show()
+    app.exec_()
+
+
+
+
+"""
+
+import os
+import time
+import pickle
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from genequery import Gene
-import os
-import time
 
 # list of tool calls
 TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal']
@@ -90,14 +184,16 @@ class QueryData:
     """
     Class for representing tool/species selections
     """
-    # tools to call
-    tools = {key: True for key in TOOL_NAMES}
-    # species of the DNA sequence
-    species = ''
-    # path of the DNA file
-    fileName = ''
-    # tool data
-    toolData = dict()
+
+    def __init__(self):
+        # tools to call
+        self.tools = {key: True for key in TOOL_NAMES}
+        # species of the DNA sequence
+        self.species = ''
+        # path of the DNA file
+        self.fileName = ''
+        # tool data
+        self.toolData = dict()
 
 
 class NewFileDialog(QDialog):
@@ -106,14 +202,14 @@ class NewFileDialog(QDialog):
     :returns: list of tools user selected to make queries to
     """
 
-    def __init__(self, tools, parent=None):
+    def __init__(self, queryData, parent=None):
         """
         Initialize Dialog
-        :param tools: ToolSpecies object
+        :param queryData: ToolSpecies object
         :param parent: parent widget
         """
         super(NewFileDialog, self).__init__(parent)
-        self.queryData = tools
+        self.queryData = queryData
 
         mainLayout = QVBoxLayout()
         checkBoxLayout = QGridLayout()
@@ -130,27 +226,27 @@ class NewFileDialog(QDialog):
         genemarkLabel = QLabel('Genemark')
         genemarkLabel.setFont(labelFont)
         gmBox = QCheckBox('Genemark')
-        gmBox.setChecked(self.queryData.tools['gm'])
+        gmBox.setChecked(True)
         hmmBox = QCheckBox('HMM')
-        hmmBox.setChecked(self.queryData.tools['hmm'])
+        hmmBox.setChecked(True)
         heuristicBox = QCheckBox('Heuristic')
-        heuristicBox.setChecked(self.queryData.tools['heuristic'])
+        heuristicBox.setChecked(True)
         gmsBox = QCheckBox('GMS')
-        gmsBox.setChecked(self.queryData.tools['gms'])
+        gmsBox.setChecked(True)
         gms2Box = QCheckBox('GMS2')
-        gms2Box.setChecked(self.queryData.tools['gms2'])
+        gms2Box.setChecked(True)
 
         # glimmer box
         glimmerLabel = QLabel('Glimmer')
         glimmerLabel.setFont(labelFont)
         glimmerBox = QCheckBox('Glimmer')
-        glimmerBox.setChecked(self.queryData.tools['glimmer'])
+        glimmerBox.setChecked(True)
 
         # prodigal box
         prodigalLabel = QLabel('Prodigal')
         prodigalLabel.setFont(labelFont)
         prodigalBox = QCheckBox('Prodigal')
-        prodigalBox.setChecked(self.queryData.tools['prodigal'])
+        prodigalBox.setChecked(True)
 
         # dictionary mapping tools to checkboxes
         self.toolCheckBoxes = dict()
@@ -337,7 +433,7 @@ class QueryThread(QThread):
 
         # perform parsing of data
         try:
-            genes = parseMethod(self.geneFile.query_data[self.tool])
+            genes = parseMethod(self.geneFile.query_data[self.tool], identity=self.tool)
         except Exception as e:
             self.queryData.toolData[self.tool] = e
             return
@@ -357,8 +453,6 @@ class QueryManager(QThread):
         """
         Initializes and starts threads for each tool to be called
         :param queryData: QueryData object
-        :param filePath: path to the DNA fasta file
-            * file should be checked to exist prior
         """
         super(QueryManager, self).__init__()
 
@@ -432,12 +526,14 @@ class QueryDialog(QDialog):
         self.progressBar.setValue(0)
         self.thread.start()
 
+    @pyqtSlot()
     def updateProgress(self):
         """
         Increment the progress bar by one
         """
         self.progressBar.setValue(self.progressBar.value() + 1)
 
+    @pyqtSlot()
     def queryStop(self):
         """
         Called when query thread stops - whether by finishing or user pressing cancel
@@ -446,6 +542,9 @@ class QueryDialog(QDialog):
         if self.progressBar.value() == self.progressBar.maximum():
             QMessageBox.information(self, 'Done', 'Done! Query Successful')
             print(self.queryData.toolData)
+            file = open('sample', 'wb')
+            pickle.dump(self.queryData, file)
+            file.close()
             QDialog.accept(self)
         else:
             QDialog.reject(self)
@@ -539,3 +638,4 @@ if __name__ == '__main__':
     window = GeneMain()
     window.show()
     app.exec_()
+
