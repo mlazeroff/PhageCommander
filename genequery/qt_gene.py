@@ -565,9 +565,16 @@ class GeneMain(QMainWindow):
         tableDock.setAllowedAreas(Qt.TopDockWidgetArea)
         tableDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
 
+        # gene table
+        self.geneTable = QTableWidget()
+
+
         # status bar
         status = self.statusBar()
         status.showMessage('Ready', 5000)
+
+        # LAYOUT -----------------------------------------------------------------------------------
+        self.setCentralWidget(self.geneTable)
 
         # ACTIONS ----------------------------------------------------------------------------------
         # new query
@@ -594,7 +601,11 @@ class GeneMain(QMainWindow):
             queryDialog = QueryDialog(self.queryData)
             # query to tools is successful
             if queryDialog.exec_():
-                pass
+                # update window title with file name
+                baseFileName = os.path.split(self.queryData.fileName)[1]
+                self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
+                # display gene data
+                self.updateTable()
             # query was canceled by user
             else:
                 pass
@@ -604,6 +615,137 @@ class GeneMain(QMainWindow):
             pass
 
     # HELPER METHODS -------------------------------------------------------------------------------
+    def updateTable(self):
+        """
+        Displays Gene data to Table
+        :return:
+        """
+        # sort genes
+        genes = []
+        for tool in self.queryData.toolData:
+            genes += self.queryData.toolData[tool]
+        genes = sorted(genes, key=self.__sort_genes)
+
+        # calculate columns for tools
+        toolNumber = len(self.queryData.toolData.keys())
+        toolColumns = toolNumber * 4 + toolNumber - 1
+        # add 3 columns for statistics
+        self.geneTable.setColumnCount(toolColumns + 3)
+
+        # generate headers
+        headerIndexes = dict()
+        TOTAL_CALLS_COLUMN = 0
+        ALL_COLUMN = 1
+        ONE_COLUMN = 2
+        currIndex = 3
+        headers = ['TOTAL CALLS', 'ALL', 'ONE']
+        for ind, tool in enumerate(self.queryData.toolData.keys()):
+            headerIndexes[tool] = currIndex
+            for i in range(4):
+                currIndex += 1
+                headers.append(tool.upper())
+            if ind != toolNumber - 1:
+                headers.append('')
+                currIndex += 1
+
+        # set headers
+        self.geneTable.setHorizontalHeaderLabels(headers)
+
+        # populate table
+        # insert first gene
+        currentRow = 0
+        self.geneTable.insertRow(currentRow)
+        previousGene = genes[0]
+        currentGeneCount = 1
+        geneIndex = headerIndexes[previousGene.identity]
+        # direction
+        directionItem = QTableWidgetItem(previousGene.direction)
+        directionItem.setTextAlignment(Qt.AlignCenter)
+        self.geneTable.setItem(currentRow, geneIndex, directionItem)
+        # start
+        startItem = QTableWidgetItem(str(previousGene.start))
+        startItem.setTextAlignment(Qt.AlignCenter)
+        self.geneTable.setItem(currentRow, geneIndex + 1, startItem)
+        # stop
+        stopItem = QTableWidgetItem(str(previousGene.stop))
+        stopItem.setTextAlignment(Qt.AlignCenter)
+        self.geneTable.setItem(currentRow, geneIndex + 2, stopItem)
+        # length
+        lengthItem = QTableWidgetItem(str(previousGene.length))
+        lengthItem.setTextAlignment(Qt.AlignCenter)
+        self.geneTable.setItem(currentRow, geneIndex + 3, lengthItem)
+
+        # insert rest of genes
+        for gene in genes[1:]:
+            geneIndex = headerIndexes[gene.identity]
+
+            # same gene - add to current row
+            if gene == previousGene:
+                currentGeneCount += 1
+            # different gene - create new row
+            else:
+                # reocrd TOTAL_CALLS, ALL and ONE for previous gene
+                totalItem = QTableWidgetItem(str(currentGeneCount))
+                totalItem.setTextAlignment(Qt.AlignCenter)
+                self.geneTable.setItem(currentRow, TOTAL_CALLS_COLUMN, totalItem)
+                if currentGeneCount == toolNumber:
+                    allItem = QTableWidgetItem(str('X'))
+                    allItem.setTextAlignment(Qt.AlignCenter)
+                    self.geneTable.setItem(currentRow, ALL_COLUMN, allItem)
+                elif currentGeneCount == 1:
+                    oneItem = QTableWidgetItem(str('X'))
+                    oneItem.setTextAlignment(Qt.AlignCenter)
+                    self.geneTable.setItem(currentRow, ONE_COLUMN, oneItem)
+
+                # record new gene
+                currentGeneCount = 1
+                currentRow += 1
+                self.geneTable.insertRow(currentRow)
+
+            # add gene to table
+            # direction
+            directionItem = QTableWidgetItem(gene.direction)
+            directionItem.setTextAlignment(Qt.AlignCenter)
+            self.geneTable.setItem(currentRow, geneIndex, directionItem)
+            # start
+            startItem = QTableWidgetItem(str(gene.start))
+            startItem.setTextAlignment(Qt.AlignCenter)
+            self.geneTable.setItem(currentRow, geneIndex + 1, startItem)
+            # stop
+            stopItem = QTableWidgetItem(str(gene.stop))
+            stopItem.setTextAlignment(Qt.AlignCenter)
+            self.geneTable.setItem(currentRow, geneIndex + 2, stopItem)
+            # length
+            lengthItem = QTableWidgetItem(str(gene.length))
+            lengthItem.setTextAlignment(Qt.AlignCenter)
+            self.geneTable.setItem(currentRow, geneIndex + 3, lengthItem)
+
+            # set gene to compare next against
+            previousGene = gene
+
+        # record TOTAL_CALLS, ALL and ONE for last gene
+        totalItem = QTableWidgetItem(str(currentGeneCount))
+        totalItem.setTextAlignment(Qt.AlignCenter)
+        self.geneTable.setItem(currentRow, TOTAL_CALLS_COLUMN, totalItem)
+        if currentGeneCount == toolNumber:
+            allItem = QTableWidgetItem(str('X'))
+            allItem.setTextAlignment(Qt.AlignCenter)
+            self.geneTable.setItem(currentRow, ALL_COLUMN, allItem)
+        elif currentGeneCount == 1:
+            oneItem = QTableWidgetItem(str('X'))
+            oneItem.setTextAlignment(Qt.AlignCenter)
+            self.geneTable.setItem(currentRow, ONE_COLUMN, oneItem)
+
+    def __sort_genes(self, gene):
+        """
+        Used to sort equivalent genes
+        :param gene: Gene
+        """
+        if gene.direction == '+':
+            return gene.stop
+        else:
+            return gene.start
+
     def createAction(self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False,
                      signal='triggered()'):
         """
