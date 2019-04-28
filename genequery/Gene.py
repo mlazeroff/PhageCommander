@@ -337,6 +337,7 @@ class GeneFile:
 
         self.query_data['prodigal'] = stdout.decode('utf-8')
 
+
     def query_all(self):
         """
         Query: Glimmer, GeneMark, GeneMarkHmm, GeneMarkS, GeneMarkS2, and GeneMark Heuristic

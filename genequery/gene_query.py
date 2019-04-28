@@ -202,6 +202,7 @@ class App:
             messagebox.showerror(title='Invalid Input File',
                                  message='Provided input file does not exist.')
         except Exception as e:
+            print(e)
             messagebox.showerror(title='Query Error',
                                  message=str(e))
 
