@@ -568,26 +568,36 @@ class GeneMain(QMainWindow):
         # gene table
         self.geneTable = QTableWidget()
 
-
         # status bar
-        status = self.statusBar()
-        status.showMessage('Ready', 5000)
+        self.status = self.statusBar()
+        self.status.showMessage('Ready')
 
         # LAYOUT -----------------------------------------------------------------------------------
         self.setCentralWidget(self.geneTable)
 
         # ACTIONS ----------------------------------------------------------------------------------
         # new query
-        newFileAction = self.createAction('&New...', self.fileNew, QKeySequence.New,
-                                          tip='Create a new query')
+        self.newFileAction = self.createAction('&New...', self.fileNew, QKeySequence.New,
+                                               tip='Create a new query')
+
+        self.saveAsAction = self.createAction('Save as...', self.saveAs,
+                                              QKeySequence('Ctrl+Shift+S'),
+                                              tip='Save gene data')
+        self.saveAsAction.setDisabled(True)
+
+        self.saveAction = self.createAction('&Save', self.save, QKeySequence.Save,
+                                            tip='Save gene data')
+        self.saveAction.setDisabled(True)
 
         # MENUS ------------------------------------------------------------------------------------
         self.fileMenu = self.menuBar().addMenu('&File')
-        self.fileMenuActions = (newFileAction,)
+        self.fileMenuActions = (self.newFileAction, self.saveAction, self.saveAsAction,)
         self.fileMenu.addActions(self.fileMenuActions)
 
         # VARIABLES --------------------------------------------------------------------------------
         self.queryData = QueryData()
+        # whether a file is currently opened
+        self.fileOpened = False
 
         # SETTINGS ---------------------------------------------------------------------------------
         self.setWindowTitle('GeneQuery')
@@ -595,12 +605,18 @@ class GeneMain(QMainWindow):
     # ACTION METHODS -------------------------------------------------------------------------------
     @pyqtSlot()
     def fileNew(self):
+        """
+        Action performed when user clicks new file
+        """
         dialog = NewFileDialog(self.queryData)
         # if user initiates a query
         if dialog.exec_():
             queryDialog = QueryDialog(self.queryData)
             # query to tools is successful
             if queryDialog.exec_():
+                # update open variable
+                self.fileOpened = True
+                self.saveAsAction.setEnabled(True)
                 # update window title with file name
                 baseFileName = os.path.split(self.queryData.fileName)[1]
                 self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
@@ -613,6 +629,44 @@ class GeneMain(QMainWindow):
         # user does not initiate query
         else:
             pass
+
+    @pyqtSlot()
+    def save(self):
+        """
+        Action performed when user clicks save
+        Saves changes to file
+        """
+        # save file
+        with open(self.queryData.fileName, 'wb') as saveFile:
+            pickle.dump(self.queryData, saveFile)
+        # update status bar
+        self.status.showMessage('Changes saved to: {}'.format(self.queryData.fileName, 5000))
+
+    @pyqtSlot()
+    def saveAs(self):
+        """
+        Action performed when user clicks Save As...
+        Prompts user for a file name and saves content to file
+        """
+        # ask user what to save file as
+        fileExtensions = ['GQ Files (*.gq)', 'All Files (*.*)']
+        saveFileName = QFileDialog.getSaveFileName(self,
+                                                   'Save as...',
+                                                   '',
+                                                   ';;'.join(fileExtensions))
+
+        # check if user didn't provide file
+        if saveFileName[0] != '':
+            with open(saveFileName[0], 'wb') as saveFile:
+                pickle.dump(self.queryData, saveFile)
+            self.status.showMessage('File saved to: {}'.format(saveFileName[0]), 5000)
+            # update file name
+            self.queryData.fileName = saveFileName[0]
+            # update window title
+            baseFileName = os.path.split(self.queryData.fileName)[1]
+            self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
+            # allow normal saves
+            self.saveAction.setEnabled(True)
 
     # HELPER METHODS -------------------------------------------------------------------------------
     def updateTable(self):
@@ -780,4 +834,3 @@ if __name__ == '__main__':
     window = GeneMain()
     window.show()
     app.exec_()
-
