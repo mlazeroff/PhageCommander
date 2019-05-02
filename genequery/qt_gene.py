@@ -580,6 +580,9 @@ class GeneMain(QMainWindow):
         self.newFileAction = self.createAction('&New...', self.fileNew, QKeySequence.New,
                                                tip='Create a new query')
 
+        self.openFileAction = self.createAction('&Open...', self.openFile, QKeySequence.Open,
+                                                tip='Open a query file')
+
         self.saveAsAction = self.createAction('Save as...', self.saveAs,
                                               QKeySequence('Ctrl+Shift+S'),
                                               tip='Save gene data')
@@ -591,13 +594,16 @@ class GeneMain(QMainWindow):
 
         # MENUS ------------------------------------------------------------------------------------
         self.fileMenu = self.menuBar().addMenu('&File')
-        self.fileMenuActions = (self.newFileAction, self.saveAction, self.saveAsAction,)
+        self.fileMenuActions = (self.newFileAction, self.openFileAction,
+                                self.saveAction, self.saveAsAction,)
         self.fileMenu.addActions(self.fileMenuActions)
 
         # VARIABLES --------------------------------------------------------------------------------
         self.queryData = QueryData()
         # whether a file is currently opened
         self.fileOpened = False
+        # if unsaved changes are present
+        self.dirty = False
 
         # SETTINGS ---------------------------------------------------------------------------------
         self.setWindowTitle('GeneQuery')
@@ -608,6 +614,11 @@ class GeneMain(QMainWindow):
         """
         Action performed when user clicks new file
         """
+        # check for unsaved data
+        if not self.okToContinue():
+            return
+
+        # open query dialog
         dialog = NewFileDialog(self.queryData)
         # if user initiates a query
         if dialog.exec_():
@@ -616,37 +627,86 @@ class GeneMain(QMainWindow):
             if queryDialog.exec_():
                 # update open variable
                 self.fileOpened = True
+                self.dirty = True
+                # enable / disable actions
                 self.saveAsAction.setEnabled(True)
-                # update window title with file name
-                baseFileName = os.path.split(self.queryData.fileName)[1]
-                self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
+                self.saveAction.setEnabled(False)
+                # update window title with temporary file name
+                self.setWindowTitle('GeneQuery - {}'.format('untitled*'))
                 # display gene data
                 self.updateTable()
-            # query was canceled by user
+            # query was canceled by user - back to main window
             else:
                 pass
 
-        # user does not initiate query
+        # user does not initiate query - back to main window
         else:
             pass
+
+    def openFile(self):
+        """
+        Open a query data file
+        :param fileName: name of the file
+        """
+        # open file dialog
+        fileExtensions = ['GQ Files (*.gq)', 'All Files (*.*)']
+        openFileName = QFileDialog.getOpenFileName(self,
+                                                   'Open Query File...',
+                                                   '',
+                                                   ';;'.join(fileExtensions))
+
+        # check if user provided a file
+        if openFileName[0] != '':
+            # try to open file
+            try:
+                with open(openFileName[0], 'rb') as openFile:
+                    tempQueryData = pickle.load(openFile)
+                    # check if file is QueryData object
+                    if not isinstance(tempQueryData, QueryData):
+                        # show error message
+                        QMessageBox.Warning(self, "Invalid File",
+                                            "File: {} was not .gq formatted file".format(
+                                                openFileName[0]))
+                        return
+                    # assign new data
+                    self.queryData = tempQueryData
+                    self.fileOpened = True
+                    # change window titles
+                    baseFileName = os.path.split(self.queryData.fileName)[1]
+                    self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
+                    # update table
+                    self.updateTable()
+            # opening file was unsuccessful
+            except FileNotFoundError:
+                QMessageBox.warning(self, 'File Does not Exist',
+                                    'File: {} does not exist.'.format(openFileName[0]))
+            except Exception as e:
+                QMessageBox.warning(self, 'Error Opening File',
+                                    str(e))
+
+
+
 
     @pyqtSlot()
     def save(self):
         """
         Action performed when user clicks save
         Saves changes to file
+        :return True/False if save was successful
         """
         # save file
         with open(self.queryData.fileName, 'wb') as saveFile:
             pickle.dump(self.queryData, saveFile)
         # update status bar
         self.status.showMessage('Changes saved to: {}'.format(self.queryData.fileName, 5000))
+        return True
 
     @pyqtSlot()
     def saveAs(self):
         """
         Action performed when user clicks Save As...
         Prompts user for a file name and saves content to file
+        :return True/False if save was successful
         """
         # ask user what to save file as
         fileExtensions = ['GQ Files (*.gq)', 'All Files (*.*)']
@@ -658,17 +718,60 @@ class GeneMain(QMainWindow):
         # check if user didn't provide file
         if saveFileName[0] != '':
             with open(saveFileName[0], 'wb') as saveFile:
+                self.queryData.fileName = saveFileName[0]
                 pickle.dump(self.queryData, saveFile)
             self.status.showMessage('File saved to: {}'.format(saveFileName[0]), 5000)
             # update file name
-            self.queryData.fileName = saveFileName[0]
             # update window title
             baseFileName = os.path.split(self.queryData.fileName)[1]
             self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
             # allow normal saves
             self.saveAction.setEnabled(True)
+            self.dirty = False
+            return True
+
+        return False
+
+    # WINDOW METHODS -------------------------------------------------------------------------------
+    def closeEvent(self, event):
+        if self.okToContinue():
+            # exit
+            pass
+        else:
+            event.ignore()
 
     # HELPER METHODS -------------------------------------------------------------------------------
+    def okToContinue(self):
+        """
+        Checks if any unsaved changes exist and prompts user if there are if they'd like to continue
+        Called when user tries to close window
+        :return True / False
+        """
+        if self.dirty:
+            userReply = QMessageBox.question(self,
+                                             'GeneQuery - Unsaved Changes',
+                                             'Save changes? - Data may be lost',
+                                             QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+            # User cancels - return to main window
+            if userReply == QMessageBox.Cancel:
+                return False
+            # User discards changes - exit
+            elif userReply == QMessageBox.No:
+                return True
+            # User wants to save - save appropriately
+            elif userReply == QMessageBox.Yes:
+                # if no current save file, prompt for save
+                if self.saveAction.isEnabled():
+                    self.save()
+                else:
+                    saveSuccess = self.saveAs()
+                    # check if user completed save
+                    # don't exit if not saved
+                    if not saveSuccess:
+                        return False
+
+        return True
+
     def updateTable(self):
         """
         Displays Gene data to Table
