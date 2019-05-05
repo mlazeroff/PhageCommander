@@ -1,96 +1,3 @@
-"""
-class Dialog(QDialog):
-    def __init__(self, parent=None):
-        super(Dialog, self).__init__(parent)
-
-        file = open('nihil_data', 'rb')
-        self.gene_data = pickle.load(file)
-        self.genes = []
-        for tool in self.gene_data.toolData:
-            self.genes += self.gene_data.toolData[tool]
-        self.tableWid = QTableWidget()
-
-        layout = QVBoxLayout()
-        layout.addWidget(self.tableWid)
-        self.setLayout(layout)
-
-        self.updateTab()
-
-    def sort_genes(self, gene):
-        if gene.direction == '+':
-            return gene.stop
-        else:
-            return gene.start
-
-    def updateTab(self):
-        # sort genes
-        self.genes = sorted(self.genes, key=self.sort_genes)
-
-        # calculate column size
-        toolNumber = len(self.gene_data.toolData.keys())
-        columns = toolNumber * 4 + toolNumber - 1
-        self.tableWid.setColumnCount(columns)
-        # generate headers
-        headerIndexes  = dict()
-        currIndex = 0
-        headers = []
-        for ind, tool in enumerate(self.gene_data.toolData.keys()):
-            headerIndexes[tool] = currIndex
-            for i in range(4):
-                currIndex += 1
-                headers.append(tool.upper())
-            if ind != toolNumber - 1:
-                headers.append('')
-                currIndex += 1
-        # set headers
-        self.tableWid.setHorizontalHeaderLabels(headers)
-
-        # populate table
-        # insert first gene
-        currentRow = 0
-        self.tableWid.insertRow(currentRow)
-        previousGene = self.genes[0]
-        currentGeneCount = 1
-        geneIndex = headerIndexes[previousGene.identity]
-        self.tableWid.setItem(currentRow, geneIndex, QTableWidgetItem(previousGene.direction))
-        self.tableWid.setItem(currentRow, geneIndex + 1, QTableWidgetItem(str(previousGene.start)))
-        self.tableWid.setItem(currentRow, geneIndex + 2, QTableWidgetItem(str(previousGene.stop)))
-        self.tableWid.setItem(currentRow, geneIndex + 3, QTableWidgetItem(str(previousGene.length)))
-
-        # insert rest of genes
-        for gene in self.genes[1:]:
-            geneIndex = headerIndexes[gene.identity]
-
-            # same gene - add to current row
-            if gene == previousGene:
-                currentGeneCount += 1
-            # different gene - create new row
-            else:
-                currentGeneCount = 1
-                currentRow += 1
-                self.tableWid.insertRow(currentRow)
-
-            # add to table
-            self.tableWid.setItem(currentRow, geneIndex, QTableWidgetItem(gene.direction))
-            self.tableWid.setItem(currentRow, geneIndex + 1, QTableWidgetItem(str(gene.start)))
-            self.tableWid.setItem(currentRow, geneIndex + 2, QTableWidgetItem(str(gene.stop)))
-            self.tableWid.setItem(currentRow, geneIndex + 3, QTableWidgetItem(str(gene.length)))
-
-            # set gene to compare next against
-            previousGene = gene
-
-
-if __name__ == '__main__':
-    app = QApplication([])
-    window = Dialog()
-    window.show()
-    app.exec_()
-
-
-
-
-"""
-
 import os
 import time
 import pickle
@@ -932,8 +839,13 @@ class GeneMain(QMainWindow):
         return action
 
 
-if __name__ == '__main__':
+# MAIN FUNCTION
+def main():
     app = QApplication([])
     window = GeneMain()
     window.show()
     app.exec_()
+
+
+if __name__ == '__main__':
+    main()
