@@ -278,30 +278,6 @@ class NewFileDialog(QDialog):
             self.fileEdit.setText(file[0])
 
 
-class SampleThread(QThread):
-    incrementSig = pyqtSignal()
-
-    def __init__(self, num):
-        QThread.__init__(self)
-        self.num = num
-        self.abort = False
-
-    def run(self):
-        index = 0
-        while index <= self.num and not self.abort:
-            index += 1
-            self.incrementSig.emit()
-            time.sleep(2)
-
-    def __del__(self):
-        # self.wait()
-        print('hi im about to be deleted')
-
-    @pyqtSlot()
-    def abortThread(self):
-        self.abort = True
-
-
 class QueryThread(QThread):
     """
     Thread for making performing the call to a gene prediction tool and parsing the data
@@ -415,7 +391,6 @@ class QueryDialog(QDialog):
 
         self.progressBar = QProgressBar()
         # set progress max to the amount of tools to be queried
-        print(self.queryData.tools)
         self.progressBar.setMaximum(list(self.queryData.tools.values()).count(True))
 
         self.cancelButton = QPushButton('Cancel')

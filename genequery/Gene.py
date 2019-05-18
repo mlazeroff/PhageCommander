@@ -170,8 +170,6 @@ class GeneFile:
     def genemarkhmm_query(self):
         """
         Query GeneMark Hmm
-        :param out: optional output file name
-        :return: name of file created
         """
         # Begin GeneMark Hmm Lookup -------------------------------------------------
         gm_hmm_data = {'sequence': '', 'org': self.species,
@@ -206,8 +204,6 @@ class GeneFile:
     def genemarks_query(self):
         """
         Query GeneMarkS
-        :param out: optional output file name
-        :return: name of file created
         """
         # Begin GeneMarkS Lookup ---------------------------------------------------
         gms_data = {'sequence': '', 'submit': 'Start GeneMarkS', 'mode': 'phage', 'format': 'LST',
@@ -232,12 +228,6 @@ class GeneFile:
         except GeneFileError:
             raise
 
-        # write response to file
-        # if out != '':
-        #     output = out
-        # else:
-        #     output = self.name + '.gms'
-        # gms_output = open(output, 'wb')
         getGmsFile = requests.get(FILE_DOMAIN + file_location)
         getGmsFile.raise_for_status()
         self.query_data['gms'] = getGmsFile.content.decode('utf-8')
@@ -246,7 +236,6 @@ class GeneFile:
     def genemark_heuristic_query(self):
         """
         Query GeneMark Heuristic
-        :param out: optional output file name
         :return: name of file created
         """
         # Begin GeneMark Heuristic Lookup ------------------------------------------
@@ -283,8 +272,6 @@ class GeneFile:
     def genemarks2_query(self):
         """
         Query GeneMarkS2
-        :param out: optional output file name
-        :return: name of file created
         """
         # Begin GeneMarkS2 Lookup -------------------------------------------------
         gmms2_data = {'sequence': '', 'submit': 'GeneMarkS-2', 'mode': 'auto', 'format': 'lst',
@@ -317,14 +304,12 @@ class GeneFile:
     def prodigal_query(self):
         """
         Calls prodigal to analyze file
-        :param out: optional output file name
-        :return: file name written to
         """
         # get path for prodigal exe
         exe_location = os.path.split(os.path.abspath(__file__))[0] + '/prodigal.windows.exe'
 
         # generate prodigal command and run
-        cmd = '{} -i \"{}\" -p meta'.format(exe_location, self.full)
+        cmd = '\"{}\" -i \"{}\" -p meta'.format(exe_location, self.full)
         proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
         stdout, stderr = proc.communicate()
 
