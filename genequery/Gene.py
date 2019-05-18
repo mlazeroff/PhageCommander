@@ -14,15 +14,15 @@ from openpyxl.styles import Font, Alignment, PatternFill, colors
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.biology.gatech.edu/GeneMark/'
-GM_DOMAIN = 'http://exon.gatech.edu/GeneMark/gm.cgi'
+GM_DOMAIN = 'http://18.220.233.194/genemark'  # Server DNA master uses
 GM_HMM_DOMAIN = 'http://exon.gatech.edu/GeneMark/gmhmmp.cgi'
 GMS_DOMAIN = 'http://exon.gatech.edu/GeneMark/genemarks.cgi'
 HEURISTIC_DOMAIN = 'http://exon.gatech.edu/GeneMark/heuristic_gmhmmp.cgi'
 GMS2_DOMAIN = 'http://exon.gatech.edu/GeneMark/genemarks2.cgi'
-GLIMMER_DOMAIN = 'http://18.220.233.194/glimmer'
+GLIMMER_DOMAIN = 'http://18.220.233.194/glimmer'  # Server DNA master uses
 
 # species
-SPECIES = {x.strip() for x in open(os.path.split(__file__)[0] + '/species.txt', 'r')}
+SPECIES = [x.strip() for x in open(os.path.split(__file__)[0] + '/species.txt', 'r')]
 
 # tools
 TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer']
@@ -82,9 +82,7 @@ class GeneFile:
 
     def glimmer_query(self):
         """
-        Queries Glimmer for DNA sequence and writes content to file
-        :param out: optional output file name
-        :return: name of file that was created
+        Queries Glimmer for DNA sequence
         """
 
         # parameters
@@ -115,7 +113,7 @@ class GeneFile:
             time.sleep(2)
             return_post = requests.post(GLIMMER_DOMAIN, data=payload, headers=headers)
             return_post.raise_for_status()
-            while 'DOCTYPE' not in return_post.text:
+            while return_post.status_code != 200:
                 time.sleep(2)
                 return_post = requests.post(GLIMMER_DOMAIN, data=payload, headers=headers)
                 return_post.raise_for_status()
@@ -128,45 +126,46 @@ class GeneFile:
     def genemark_query(self):
         """
         Query to GeneMark
-        :param out: optional output file name
-        :return: name of file created
         """
-        # Begin GeneMark Lookup -----------------------------------------------------
-        gm_data = {'sequence': '', 'org': self.species,
-                   'submit': 'Start GeneMark', 'email': '', 'subject': 'GeneMark', 'windowsize': 96,
-                   'stepsize': 12, 'threshold': 0.5, 'rbs': 'none', 'mode': 'native'}
+        # parameters
+        payload = [('sequence', self.file_info['file'][1]),
+                   ('gencode', b'11'), ('topology', b'0'),
+                   ('submit', b'Run GeneMark.hmm')]
 
-        # GeneMark post - if unsuccessful, error thrown
-        gm_post_request = requests.post(GM_DOMAIN, files=self.file_info, data=gm_data)
-        gm_post_request.raise_for_status()
-        soup = BeautifulSoup(gm_post_request.text, 'html.parser')
+        # headers
+        headers = {'User-Agent': 'GeneQuery'}
 
-        # Get URL for gm output
-        file_location = ''
-        for a in soup.find_all('a', href=True):
-            if 'tmp' in a['href']:
-                file_location = a['href']
-                break
-
-        # if tmp not available, change in response format or invalid post
+        # perform POST of file data
+        file_post = requests.post(GM_DOMAIN, data=payload, headers=headers)
+        file_post.raise_for_status()
+        # check for job_key in response, if not raise error
         try:
-            if file_location == '':
-                raise GeneFileError("GeneMark")
+            if 'job_key' not in file_post.text:
+                raise GeneFileError("GeneMark - Invalid Response from server")
         except GeneFileError:
             raise
 
+        # get job_key from response
+        job_key = file_post.text.split('=')
+        payload = [(job_key[0], job_key[1])]
 
-        # write gm response to file
-        # if out != '':
-        #     output = out
-        # else:
-        #     output = self.name + '.gm'
-        # gm_output = open(output, 'wb')
-        getGMFile = requests.get(FILE_DOMAIN + file_location)
-        getGMFile.raise_for_status()
-        # gm_output.write(getGMFile.content)
+        # query server for output file
+        # if output file is not ready, wait 2 seconds and requery
+        try:
+            time.sleep(2)
+            return_post = requests.post(GM_DOMAIN, data=payload, headers=headers)
+            return_post.raise_for_status()
+            # if job is not ready, HTTP response code 202 is returned
+            while return_post.status_code != 200:
+                time.sleep(2)
+                return_post = requests.post(GM_DOMAIN, data=payload, headers=headers)
+                return_post.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            print(e)
+            raise GeneFileError(
+                'GeneMark Server Error: Check for DNA for proper format or check server status')
 
-        self.query_data['gm'] = getGMFile.content.decode('utf-8')
+        self.query_data['gm'] = return_post.content.decode('utf-8')
         # End GeneMark Lookup -------------------------------------------------------
 
     def genemarkhmm_query(self):
@@ -338,65 +337,6 @@ class GeneFile:
         self.query_data['prodigal'] = stdout.decode('utf-8')
 
 
-    def query_all(self):
-        """
-        Query: Glimmer, GeneMark, GeneMarkHmm, GeneMarkS, GeneMarkS2, and GeneMark Heuristic
-        :output: optional output directory, otherwise outputs to GeneFile directory
-        :return: list of files written to in the following order:
-               Glimmer, GeneMark, GeneMark Hmm, GeneMarkS, GeneMarkS2, GeneMarkHeuristic
-        """
-
-        # list containing file output names
-        files = []
-
-        # Begin Queries
-        print('Start Querying:')
-
-        # Glimmer
-        print('Glimmer...', end='', flush=True)
-        files.append(self.glimmer_query(out=output + self.name + '.glimmer'))
-        print('done', flush=True)
-
-        # GeneMark
-        print('GeneMark...', end='', flush=True)
-        files.append(self.genemark_query(out=output + self.name + '.gm'))
-        print('done', flush=True)
-
-        # Hmm
-        print('Hmm...', end='', flush=True)
-        files.append(self.genemarkhmm_query(out=output + self.name + '.gmhmm'))
-        print('done', flush=True)
-
-        # GMS
-        print('GMS...', end='', flush=True)
-        files.append(self.genemarks_query(out=output + self.name + '.gms'))
-        print('done', flush=True)
-
-        # GMS2
-        print('GMS2...', end='', flush=True)
-        files.append(self.genemarks2_query(out=output + self.name + '.gms2'))
-        print('done', flush=True)
-
-        # Heuristic
-        print('Heuristic...', end='', flush=True)
-        files.append(self.genemark_heuristic_query(out=output + self.name + '.heuristic'))
-        print('done', flush=True)
-
-        # Prodigal
-        print('Prodigal...', end='', flush=True)
-        files.append(self.prodigal_query(out=output + self.name + '.prodigal'))
-        print('done', flush=True)
-
-        if output != '':
-            directory = output
-        else:
-            directory = os.getcwd()
-        print('Files written to:', directory)
-
-        # return file list
-        return files
-
-
 class GeneError(Error):
     def __init__(self, message):
         self.message = message
@@ -508,7 +448,7 @@ class GeneParse:
         # skip until Region of Interests section
         index = 0
         for ind, line in enumerate(gm_data):
-            if ' LEnd      REnd    Strand      Frame' in line:
+            if '   Gene    Strand    LeftEnd    RightEnd       Gene     Class' in line:
                 index = ind
                 break
 
@@ -524,13 +464,10 @@ class GeneParse:
         for line in gm_data:
             if line != '':
                 data = [x for x in line.strip().split(' ') if x != '']
-                # check gene orientation
-                if data[2] == 'direct':
-                    direction = '+'
-                else:
-                    direction = '-'
-                # add to list
-                genes.append(Gene(data[0], data[1], direction, identity=identity))
+                start = data[2]
+                stop = data[3]
+                direction = data[1]
+                genes.append(Gene(start, stop, direction, identity=identity))
             else:
                 break
 
@@ -894,28 +831,11 @@ def excel_write(output_directory, files, sequence):
 
 
 if __name__ == '__main__':
-    # parse arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument('sequence', help='DNA sequence file')
-    parser.add_argument('species', help='DNA species, see species.txt for full list')
-    parser.add_argument('output', help='Output directory')
-    parser.add_argument('-rm', help='Remove all Glimmer/GeneMark output files', action='store_true')
-    args = parser.parse_args()
-
-    # create sequence
-    sequence = GeneFile(args.sequence, args.species)
-
-    # check if output directory exists, if not, create it
-    if not os.path.isdir(args.output):
-        os.mkdir(args.output)
-
-    # query
-    files = sequence.query_all(output=args.output)
-
-    # write to Excel file
-    excel_write(args.output, files, sequence)
-
-    # If -rm flag given, remove all output files
-    if args.rm:
-        for file in files:
-            os.remove(file)
+    gfile = GeneFile(
+        'D:\mdlaz\Documents\college\Research\programs\GeneQuery\\tests\\fasta_files\Diane complete.fasta',
+        'Paenibacillus_larvae_subsp_ATCC_9545')
+    gfile.genemark_query()
+    with open('genemark.txt', 'w') as file:
+        file.write(gfile.query_data['gm'])
+    genes = GeneParse.parse_genemark(gfile.query_data['gm'])
+    print(genes)

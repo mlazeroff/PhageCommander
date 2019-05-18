@@ -448,10 +448,6 @@ class QueryDialog(QDialog):
         # if successful query - display success message
         if self.progressBar.value() == self.progressBar.maximum():
             QMessageBox.information(self, 'Done', 'Done! Query Successful')
-            print(self.queryData.toolData)
-            file = open('sample', 'wb')
-            pickle.dump(self.queryData, file)
-            file.close()
             QDialog.accept(self)
         else:
             QDialog.reject(self)
