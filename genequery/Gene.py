@@ -21,7 +21,9 @@ GMS2_DOMAIN = 'http://exon.gatech.edu/GeneMark/genemarks2.cgi'
 GLIMMER_DOMAIN = 'http://18.220.233.194/glimmer'  # Server DNA master uses
 
 # species
-SPECIES = [x.strip() for x in open(os.path.split(__file__)[0] + '/species.txt', 'r')]
+species_file = os.path.join(os.path.dirname(__file__), 'species.txt')
+with open(species_file, 'r') as file:
+    SPECIES = [specie.strip() for specie in file]
 
 # tools
 TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer']
@@ -306,7 +308,7 @@ class GeneFile:
         Calls prodigal to analyze file
         """
         # get path for prodigal exe
-        exe_location = os.path.split(os.path.abspath(__file__))[0] + '/prodigal.windows.exe'
+        exe_location = os.path.join(os.path.dirname(__file__), 'prodigal.windows.exe')
 
         # generate prodigal command and run
         cmd = '\"{}\" -i \"{}\" -p meta'.format(exe_location, self.full)
@@ -392,7 +394,6 @@ class GeneParse:
     Class for parsing GeneMark output files
     All methods are static
     """
-
 
     @staticmethod
     def parse_glimmer(glimmer_data, identity=''):

@@ -11,12 +11,12 @@ setuptools.setup(
     packages=['genequery'],
     package_data={'genequery': ['species.txt', 'prodigal.windows.exe']},
     install_requires=['requests',
-                      'beautifulsoup4',
+                      'bs4',
                       'openpyxl',
                       'pyqt5'],
-    entry_points={'gui_scripts': 'genequery = genequery.qt_gene:main'},
+    entry_points={'gui_scripts': 'genequery = genequery.gquery:main'},
     classifiers=["Programming Language :: Python :: 3",
                  "License :: OSI Approved :: GPL-3",
                  "Operating System :: Windows"],
-    include_package_data=True
+    include_package_data=True,
 )
