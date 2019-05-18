@@ -7,7 +7,6 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import os
-import argparse
 from subprocess import Popen, PIPE
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, colors
