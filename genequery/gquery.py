@@ -1,10 +1,11 @@
 import os
-import time
 import pickle
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from genequery import Gene
+
+APP_NAME = 'GeneQuery'
 
 # list of tool calls
 TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal']
@@ -27,64 +28,244 @@ TOOL_METHODS = {'gm': [Gene.GeneFile.genemark_query,
                              Gene.GeneParse.parse_prodigal]}
 
 
+class ColorTable(QWidget):
+    _CELL_COLOR_SETTING = 'table/cell_color/'
+    _MAJORITY_TEXT_SETTING = 'table/majority_text_color/'
+    _MINORITY_TEXT_SETTING = 'table/minority_text_color/'
+    _TABLE_COLUMN_HEADERS = ['Cell Color', 'Majority Text', 'Minority Text']
+    _TABLE_MAJORITY_MINORITY_DEFAULT_TEXT = '4099'
+    _CELL_COLOR_COLUMN = 0
+    _MAJORITY_TEXT_COLUMN = 1
+    _MINORITY_TEXT_COLUMN = 2
+    _DEFAULT_CELL_COLORS = [
+        (255, 255, 255),
+        (218, 238, 243),
+        (183, 222, 232),
+        (146, 205, 220),
+        (49, 134, 155),
+        (33, 89, 103),
+        (21, 59, 68)
+    ]
+    _DEFAULT_MAJORITY_COLORS = [
+        (0, 0, 0),
+        (0, 0, 0),
+        (0, 0, 0),
+        (0, 0, 0),
+        (255, 255, 255),
+        (255, 255, 255),
+        (255, 255, 255)
+    ]
+    _DEFAULT_MINORITY_COLORS = [
+        (255, 75, 75),
+        (255, 75, 75),
+        (255, 75, 75),
+        (255, 75, 75),
+        (255, 75, 75),
+        (255, 75, 75),
+        (255, 75, 75),
+    ]
+
+    def __init__(self, settings, parent=None):
+        super(ColorTable, self).__init__(parent)
+        self.settings = settings
+
+        layout = QVBoxLayout()
+
+        # WIDGETS ------------------------------------------------------------------------------------------------------
+        # Color Selection Table
+        self.tableWidget = QTableWidget()
+        self.tableWidget.setRowCount(7)
+        self.tableWidget.setColumnCount(len(self._TABLE_COLUMN_HEADERS))
+        self.tableWidget.setHorizontalHeaderLabels(self._TABLE_COLUMN_HEADERS)
+        self.tableWidget.horizontalHeader()
+        self.tableWidget.setSelectionMode(QTableWidget.NoSelection)
+        self.tableWidget.cellClicked.connect(self.tableClick)
+        self.tableWidget.setCornerButtonEnabled(False)
+        self.tableWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.tableWidget.horizontalScrollBar().setDisabled(True)
+        self.tableWidget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.tableWidget.verticalScrollBar().setDisabled(True)
+        columnWidth = self.tableWidget.columnWidth(0)
+        vertHeaderWidth = self.tableWidget.verticalHeader().width()
+        self.tableWidget.setMinimumWidth(vertHeaderWidth + (3 * columnWidth))
+        self.tableWidget.setMaximumWidth(vertHeaderWidth + (3 * columnWidth))
+
+        # insert items into table
+        tableHeight = self.tableWidget.horizontalHeader().height()
+        for i in range(7):
+            self.tableWidget.setRowHeight(i, 20)
+            tableHeight += self.tableWidget.rowHeight(i)
+            item = QTableWidgetItem()
+            majorityItem = QTableWidgetItem(self._TABLE_MAJORITY_MINORITY_DEFAULT_TEXT)
+            minorityItem = QTableWidgetItem(self._TABLE_MAJORITY_MINORITY_DEFAULT_TEXT)
+
+            # set default cell color if no setting is found
+            colorSetting = self.settings.value(self._CELL_COLOR_SETTING + str(i))
+            if colorSetting is not None:
+                colors = [int(num) for num in colorSetting.split(' ')]
+                color = QColor(*colors)
+            else:
+                color = QColor(*self._DEFAULT_CELL_COLORS[i])
+                colorStr = [str(num) for num in self._DEFAULT_CELL_COLORS[i]]
+                self.settings.setValue(self._CELL_COLOR_SETTING + str(i), ' '.join(colorStr))
+            item.setBackground(color)
+            majorityItem.setBackground(color)
+            minorityItem.setBackground(color)
+
+            # set default majority color if no setting is found
+            majoritySetting = self.settings.value(self._MAJORITY_TEXT_SETTING + str(i))
+            if majoritySetting is not None:
+                colors = [int(num) for num in majoritySetting.split(' ')]
+                color = QColor(*colors)
+                majorityItem.setForeground(color)
+            else:
+                defaultColor = QColor(*self._DEFAULT_MAJORITY_COLORS[i])
+                majorityItem.setForeground(defaultColor)
+                defaultColorStr = ' '.join([str(x) for x in defaultColor.getRgb()[:3]])
+                self.settings.setValue(self._MAJORITY_TEXT_SETTING + str(i), defaultColorStr)
+
+            # set default minority color if no setting is found
+            minoritySetting = self.settings.value(self._MINORITY_TEXT_SETTING + str(i))
+            if minoritySetting is not None:
+                colors = [int(num) for num in minoritySetting.split(' ')]
+                color = QColor(*colors)
+                minorityItem.setForeground(color)
+            else:
+                defaultColor = QColor(*self._DEFAULT_MINORITY_COLORS[i])
+                minorityItem.setForeground(defaultColor)
+                defaultColorStr = ' '.join([str(x) for x in defaultColor.getRgb()[:3]])
+                self.settings.setValue(self._MINORITY_TEXT_SETTING + str(i), defaultColorStr)
+
+            # add items to table
+            self.tableWidget.setItem(i, self._CELL_COLOR_COLUMN, item)
+            self.tableWidget.setItem(i, self._MAJORITY_TEXT_COLUMN, majorityItem)
+            self.tableWidget.setItem(i, self._MINORITY_TEXT_COLUMN, minorityItem)
+            majorityItem.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+            minorityItem.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.tableWidget.setMaximumHeight(tableHeight)
+        self.tableWidget.setMinimumHeight(tableHeight)
+
+        # reset button
+        resetButton = QPushButton('Reset ALL')
+        resetButton.clicked.connect(self.resetToDefaultAll)
+        layout.addWidget(self.tableWidget)
+        layout.addWidget(resetButton)
+
+        self.setLayout(layout)
+
+    @pyqtSlot(int, int)
+    def tableClick(self, row, column):
+        """
+        Called when an item in the table is clicked
+        Performs the appropriate action on the item based on the column of item
+        :param row:  int
+        :param column: int
+        """
+        if column == self._CELL_COLOR_COLUMN:
+            self.changeCellColor(row, column)
+        if column == self._MAJORITY_TEXT_COLUMN or column == self._MINORITY_TEXT_COLUMN:
+            self.changeTextColor(row, column)
+
+    def changeTextColor(self, row, column):
+        """
+        Changes the text color of the cell and saves the color to settings
+        :param row: int
+        :param column: int
+        """
+        tableItem = self.tableWidget.item(row, column)
+        colorDialog = QColorDialog()
+        currColor = tableItem.foreground().color()
+        color = colorDialog.getColor(currColor, self, 'Select Text Color')
+        if color.isValid():
+            tableItem.setForeground(color)
+            colorStr = ' '.join([str(x) for x in color.getRgb()[:3]])
+            if column == self._MAJORITY_TEXT_COLUMN:
+                self.settings.setValue(self._MAJORITY_TEXT_SETTING + str(row), colorStr)
+            if column == self._MINORITY_TEXT_COLUMN:
+                self.settings.setValue(self._MINORITY_TEXT_SETTING + str(row), colorStr)
+
+    def changeCellColor(self, row, column):
+        """
+        Changes the color of the row and saves color to setting
+        :param row: int
+        :param column: int
+        """
+        item = self.tableWidget.item(row, column)
+        majorityItem = self.tableWidget.item(row, column + 1)
+        minorityItem = self.tableWidget.item(row, column + 2)
+        colorDialog = QColorDialog()
+        currColor = item.background().color()
+        color = colorDialog.getColor(currColor, self, 'Select Cell Color')
+        if color.isValid():
+            item.setBackground(color)
+            majorityItem.setBackground(color)
+            minorityItem.setBackground(color)
+            colorStr = ' '.join([str(x) for x in color.getRgb()[:3]])
+            self.settings.setValue(self._CELL_COLOR_SETTING + str(row), colorStr)
+
+    def resetToDefaultAll(self):
+        """
+        Resets all rows to default colors
+        """
+        # prompt user if they wish to reset
+        response = QMessageBox.warning(self,
+                                       'Reset to Default',
+                                       'Reset to Default? - Existing settings will be reset',
+                                       QMessageBox.Ok | QMessageBox.Cancel)
+
+        if response == QMessageBox.Ok:
+            for row in range(self.tableWidget.rowCount()):
+                # set majority text color
+                majorityItem = self.tableWidget.item(row, self._MAJORITY_TEXT_COLUMN)
+                majorityColor = QColor(*self._DEFAULT_MAJORITY_COLORS[row])
+                majorityItem.setForeground(majorityColor)
+                majorityColorStr = ' '.join([str(x) for x in majorityColor.getRgb()[:3]])
+                self.settings.setValue(self._MAJORITY_TEXT_SETTING + str(row), majorityColorStr)
+
+                # set minority text color
+                minorityItem = self.tableWidget.item(row, self._MINORITY_TEXT_COLUMN)
+                minorityColor = QColor(*self._DEFAULT_MINORITY_COLORS[row])
+                minorityItem.setForeground(minorityColor)
+                minorityColorStr = ' '.join([str(x) for x in minorityColor.getRgb()[:3]])
+                self.settings.setValue(self._MINORITY_TEXT_SETTING + str(row), minorityColorStr)
+
+                # set cell color
+                cellColorItem = self.tableWidget.item(row, self._CELL_COLOR_COLUMN)
+                cellColor = QColor(*self._DEFAULT_CELL_COLORS[row])
+                cellColorItem.setBackground(cellColor)
+                majorityItem.setBackground(cellColor)
+                minorityItem.setBackground(cellColor)
+                cellColorStr = ' '.join([str(x) for x in cellColor.getRgb()[:3]])
+                self.settings.setValue(self._CELL_COLOR_SETTING + str(row), cellColorStr)
+
 class SettingsDialog(QDialog):
     """
     Dialog for Settings
     """
-
     def __init__(self, parent=None):
         super(SettingsDialog, self).__init__(parent)
+        self.settings = QSettings(QSettings.IniFormat, QSettings.UserScope, APP_NAME, APP_NAME)
 
-        # WIDGETS ----------------------------------------------------------------------------------
-        self.tabWidget = QTabWidget()
-
-        # TAB WIDGET TABS --------------------------------------------------------------------------
-        self.toolTab = QWidget()
-        self.tabWidget.addTab(self.toolTab, 'Tools')
-
-        # Tools Tab Layout
-        toolLayout = QVBoxLayout()
-
-        # genemark widgets
-        genemarkLabel = QLabel('Genemark')
-        genemarkLabelFont = QFont()
-        genemarkLabelFont.setUnderline(True)
-        genemarkLabel.setFont(genemarkLabelFont)
-        toolLayout.addWidget(genemarkLabel)
-        genemarkBoxes = QGridLayout()
-        gmBox = QCheckBox('Genemark')
-        hmmBox = QCheckBox('HMM')
-        heuristicBox = QCheckBox('Heuristic')
-        gmsBox = QCheckBox('GMS')
-        gms2Box = QCheckBox('GMS2')
-
-        genemarkBoxes.addWidget(gmBox, 0, 0)
-        genemarkBoxes.addWidget(hmmBox, 0, 1)
-        genemarkBoxes.addWidget(heuristicBox, 0, 2)
-        genemarkBoxes.addWidget(gmsBox, 1, 0)
-        genemarkBoxes.addWidget(gms2Box, 1, 1)
-        toolLayout.addLayout(genemarkBoxes)
-
-        # glimmer widgets
-        glimmerLabel = QLabel('Glimmer')
-        glimmerLabel.setFont(genemarkLabelFont)
-        genemarkBoxes.addWidget(glimmerLabel, 2, 0)
-        glimmerBox = QCheckBox('Glimmer')
-        genemarkBoxes.addWidget(glimmerBox, 3, 0)
-
-        # prodigal widgets
-        prodigalLabel = QLabel('Prodigal')
-        prodigalLabel.setFont(genemarkLabelFont)
-        prodigalBox = QCheckBox('Prodigal')
-        genemarkBoxes.addWidget(prodigalLabel, 2, 1)
-        genemarkBoxes.addWidget(prodigalBox, 3, 1)
-
-        self.toolTab.setLayout(toolLayout)
-
-        # Tools - Genemark Widgets
+        # WIDGETS --------------------------------------------------------------------
         layout = QVBoxLayout()
+        self.tabWidget = QTabWidget()
+        self.tableTab = QWidget()
+
+        # UI Initializations
+        self.initTableTab()
+
+        # Layout
         layout.addWidget(self.tabWidget)
         self.setLayout(layout)
+
+        # Window Settings
+        self.setWindowTitle('Settings')
+        self.setWindowFlags(Qt.WindowCloseButtonHint)
+
+    def initTableTab(self):
+        self.tableTab = ColorTable(self.settings)
+        self.tabWidget.addTab(self.tableTab, 'Table')
+
 
 
 class QueryData:
@@ -470,11 +651,15 @@ class GeneMain(QMainWindow):
                                             tip='Save gene data')
         self.saveAction.setDisabled(True)
 
+        self.settingsAction = self.createAction('Settings', self.settings, None, )
+
         # MENUS ------------------------------------------------------------------------------------
         self.fileMenu = self.menuBar().addMenu('&File')
         self.fileMenuActions = (self.newFileAction, self.openFileAction,
-                                self.saveAction, self.saveAsAction,)
+                                self.saveAction, self.saveAsAction)
         self.fileMenu.addActions(self.fileMenuActions)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addActions([self.settingsAction])
 
         # VARIABLES --------------------------------------------------------------------------------
         self.queryData = QueryData()
@@ -562,9 +747,6 @@ class GeneMain(QMainWindow):
                 QMessageBox.warning(self, 'Error Opening File',
                                     str(e))
 
-
-
-
     @pyqtSlot()
     def save(self):
         """
@@ -609,6 +791,11 @@ class GeneMain(QMainWindow):
             return True
 
         return False
+
+    @pyqtSlot()
+    def settings(self):
+        preferencesDialog = SettingsDialog()
+        preferencesDialog.exec_()
 
     # WINDOW METHODS -------------------------------------------------------------------------------
     def closeEvent(self, event):
