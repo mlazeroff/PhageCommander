@@ -29,9 +29,9 @@ TOOL_METHODS = {'gm': [Gene.GeneFile.genemark_query,
 
 
 class ColorTable(QWidget):
-    _CELL_COLOR_SETTING = 'table/cell_color/'
-    _MAJORITY_TEXT_SETTING = 'table/majority_text_color/'
-    _MINORITY_TEXT_SETTING = 'table/minority_text_color/'
+    CELL_COLOR_SETTING = 'table/cell_color/'
+    MAJORITY_TEXT_SETTING = 'table/majority_text_color/'
+    MINORITY_TEXT_SETTING = 'table/minority_text_color/'
     _TABLE_COLUMN_HEADERS = ['Cell Color', 'Majority Text', 'Minority Text']
     _TABLE_MAJORITY_MINORITY_DEFAULT_TEXT = '4099'
     _CELL_COLOR_COLUMN = 0
@@ -100,20 +100,20 @@ class ColorTable(QWidget):
             minorityItem = QTableWidgetItem(self._TABLE_MAJORITY_MINORITY_DEFAULT_TEXT)
 
             # set default cell color if no setting is found
-            colorSetting = self.settings.value(self._CELL_COLOR_SETTING + str(i))
+            colorSetting = self.settings.value(self.CELL_COLOR_SETTING + str(i))
             if colorSetting is not None:
                 colors = [int(num) for num in colorSetting.split(' ')]
                 color = QColor(*colors)
             else:
                 color = QColor(*self._DEFAULT_CELL_COLORS[i])
                 colorStr = [str(num) for num in self._DEFAULT_CELL_COLORS[i]]
-                self.settings.setValue(self._CELL_COLOR_SETTING + str(i), ' '.join(colorStr))
+                self.settings.setValue(self.CELL_COLOR_SETTING + str(i), ' '.join(colorStr))
             item.setBackground(color)
             majorityItem.setBackground(color)
             minorityItem.setBackground(color)
 
             # set default majority color if no setting is found
-            majoritySetting = self.settings.value(self._MAJORITY_TEXT_SETTING + str(i))
+            majoritySetting = self.settings.value(self.MAJORITY_TEXT_SETTING + str(i))
             if majoritySetting is not None:
                 colors = [int(num) for num in majoritySetting.split(' ')]
                 color = QColor(*colors)
@@ -122,10 +122,10 @@ class ColorTable(QWidget):
                 defaultColor = QColor(*self._DEFAULT_MAJORITY_COLORS[i])
                 majorityItem.setForeground(defaultColor)
                 defaultColorStr = ' '.join([str(x) for x in defaultColor.getRgb()[:3]])
-                self.settings.setValue(self._MAJORITY_TEXT_SETTING + str(i), defaultColorStr)
+                self.settings.setValue(self.MAJORITY_TEXT_SETTING + str(i), defaultColorStr)
 
             # set default minority color if no setting is found
-            minoritySetting = self.settings.value(self._MINORITY_TEXT_SETTING + str(i))
+            minoritySetting = self.settings.value(self.MINORITY_TEXT_SETTING + str(i))
             if minoritySetting is not None:
                 colors = [int(num) for num in minoritySetting.split(' ')]
                 color = QColor(*colors)
@@ -134,7 +134,7 @@ class ColorTable(QWidget):
                 defaultColor = QColor(*self._DEFAULT_MINORITY_COLORS[i])
                 minorityItem.setForeground(defaultColor)
                 defaultColorStr = ' '.join([str(x) for x in defaultColor.getRgb()[:3]])
-                self.settings.setValue(self._MINORITY_TEXT_SETTING + str(i), defaultColorStr)
+                self.settings.setValue(self.MINORITY_TEXT_SETTING + str(i), defaultColorStr)
 
             # add items to table
             self.tableWidget.setItem(i, self._CELL_COLOR_COLUMN, item)
@@ -180,9 +180,9 @@ class ColorTable(QWidget):
             tableItem.setForeground(color)
             colorStr = ' '.join([str(x) for x in color.getRgb()[:3]])
             if column == self._MAJORITY_TEXT_COLUMN:
-                self.settings.setValue(self._MAJORITY_TEXT_SETTING + str(row), colorStr)
+                self.settings.setValue(self.MAJORITY_TEXT_SETTING + str(row), colorStr)
             if column == self._MINORITY_TEXT_COLUMN:
-                self.settings.setValue(self._MINORITY_TEXT_SETTING + str(row), colorStr)
+                self.settings.setValue(self.MINORITY_TEXT_SETTING + str(row), colorStr)
 
     def changeCellColor(self, row, column):
         """
@@ -201,7 +201,7 @@ class ColorTable(QWidget):
             majorityItem.setBackground(color)
             minorityItem.setBackground(color)
             colorStr = ' '.join([str(x) for x in color.getRgb()[:3]])
-            self.settings.setValue(self._CELL_COLOR_SETTING + str(row), colorStr)
+            self.settings.setValue(self.CELL_COLOR_SETTING + str(row), colorStr)
 
     def resetToDefaultAll(self):
         """
@@ -220,14 +220,14 @@ class ColorTable(QWidget):
                 majorityColor = QColor(*self._DEFAULT_MAJORITY_COLORS[row])
                 majorityItem.setForeground(majorityColor)
                 majorityColorStr = ' '.join([str(x) for x in majorityColor.getRgb()[:3]])
-                self.settings.setValue(self._MAJORITY_TEXT_SETTING + str(row), majorityColorStr)
+                self.settings.setValue(self.MAJORITY_TEXT_SETTING + str(row), majorityColorStr)
 
                 # set minority text color
                 minorityItem = self.tableWidget.item(row, self._MINORITY_TEXT_COLUMN)
                 minorityColor = QColor(*self._DEFAULT_MINORITY_COLORS[row])
                 minorityItem.setForeground(minorityColor)
                 minorityColorStr = ' '.join([str(x) for x in minorityColor.getRgb()[:3]])
-                self.settings.setValue(self._MINORITY_TEXT_SETTING + str(row), minorityColorStr)
+                self.settings.setValue(self.MINORITY_TEXT_SETTING + str(row), minorityColorStr)
 
                 # set cell color
                 cellColorItem = self.tableWidget.item(row, self._CELL_COLOR_COLUMN)
@@ -236,7 +236,8 @@ class ColorTable(QWidget):
                 majorityItem.setBackground(cellColor)
                 minorityItem.setBackground(cellColor)
                 cellColorStr = ' '.join([str(x) for x in cellColor.getRgb()[:3]])
-                self.settings.setValue(self._CELL_COLOR_SETTING + str(row), cellColorStr)
+                self.settings.setValue(self.CELL_COLOR_SETTING + str(row), cellColorStr)
+
 
 class SettingsDialog(QDialog):
     """
@@ -265,7 +266,6 @@ class SettingsDialog(QDialog):
     def initTableTab(self):
         self.tableTab = ColorTable(self.settings)
         self.tabWidget.addTab(self.tableTab, 'Table')
-
 
 
 class QueryData:
@@ -471,7 +471,6 @@ class QueryThread(QThread):
         :param geneFile: GeneFile object of DNA file
         :param tool: tool to call
             * See TOOL_NAMES global
-        :param geneData:
         """
         super(QueryThread, self).__init__()
 
@@ -668,6 +667,8 @@ class GeneMain(QMainWindow):
         # if unsaved changes are present
         self.dirty = False
 
+        self.settings = QSettings(QSettings.IniFormat, QSettings.UserScope, APP_NAME, APP_NAME)
+
         # SETTINGS ---------------------------------------------------------------------------------
         self.setWindowTitle('GeneQuery')
 
@@ -842,6 +843,9 @@ class GeneMain(QMainWindow):
         Displays Gene data to Table
         :return:
         """
+        # table options
+        self.geneTable.setSelectionMode(QTableWidget.NoSelection)
+
         # sort genes
         genes = []
         for tool in self.queryData.toolData:
@@ -851,8 +855,9 @@ class GeneMain(QMainWindow):
         # calculate columns for tools
         toolNumber = len(self.queryData.toolData.keys())
         toolColumns = toolNumber * 4 + toolNumber - 1
+        totalColumns = toolColumns + 3
         # add 3 columns for statistics
-        self.geneTable.setColumnCount(toolColumns + 3)
+        self.geneTable.setColumnCount(totalColumns)
 
         # generate headers
         headerIndexes = dict()
@@ -879,6 +884,7 @@ class GeneMain(QMainWindow):
         self.geneTable.insertRow(currentRow)
         previousGene = genes[0]
         currentGeneCount = 1
+        currentGenes = dict()
         geneIndex = headerIndexes[previousGene.identity]
         # direction
         directionItem = QTableWidgetItem(previousGene.direction)
@@ -897,6 +903,16 @@ class GeneMain(QMainWindow):
         lengthItem.setTextAlignment(Qt.AlignCenter)
         self.geneTable.setItem(currentRow, geneIndex + 3, lengthItem)
 
+        if previousGene.direction == '+':
+            comparingNum = previousGene.start
+        else:
+            comparingNum = previousGene.stop
+        # insert comparing num into dict
+        if comparingNum not in currentGenes.keys():
+            currentGenes[comparingNum] = 1
+        else:
+            currentGenes[comparingNum] += 1
+
         # insert rest of genes
         for gene in genes[1:]:
             geneIndex = headerIndexes[gene.identity]
@@ -906,7 +922,7 @@ class GeneMain(QMainWindow):
                 currentGeneCount += 1
             # different gene - create new row
             else:
-                # reocrd TOTAL_CALLS, ALL and ONE for previous gene
+                # record TOTAL_CALLS, ALL and ONE for previous gene
                 totalItem = QTableWidgetItem(str(currentGeneCount))
                 totalItem.setTextAlignment(Qt.AlignCenter)
                 self.geneTable.setItem(currentRow, TOTAL_CALLS_COLUMN, totalItem)
@@ -919,8 +935,29 @@ class GeneMain(QMainWindow):
                     oneItem.setTextAlignment(Qt.AlignCenter)
                     self.geneTable.setItem(currentRow, ONE_COLUMN, oneItem)
 
+                print('{} - {}'.format(currentRow + 1, currentGenes))
+
+                # color row
+                colorSetting = self.settings.value(ColorTable.CELL_COLOR_SETTING + str(currentGeneCount))
+                colorNums = [int(num) for num in colorSetting.split(' ')]
+                color = QColor(*colorNums)
+                # color text
+                textColorSetting = self.settings.value(ColorTable.MAJORITY_TEXT_SETTING + str(currentGeneCount))
+                textNums = [int(num) for num in textColorSetting.split(' ')]
+                textColor = QColor(*textNums)
+                # TODO: Figure out minority rule
+                for column in range(totalColumns):
+                    item = self.geneTable.item(currentRow, column)
+                    # insert blank item if none is present
+                    if item is None:
+                        item = QTableWidgetItem('')
+                        self.geneTable.setItem(currentRow, column, item)
+                    item.setBackground(color)
+                    item.setForeground(textColor)
+
                 # record new gene
                 currentGeneCount = 1
+                currentGenes = dict()
                 currentRow += 1
                 self.geneTable.insertRow(currentRow)
 
@@ -942,6 +979,16 @@ class GeneMain(QMainWindow):
             lengthItem.setTextAlignment(Qt.AlignCenter)
             self.geneTable.setItem(currentRow, geneIndex + 3, lengthItem)
 
+            if gene.direction == '+':
+                comparingNum = gene.start
+            else:
+                comparingNum = gene.stop
+                # insert comparing num into dict
+            if comparingNum not in currentGenes.keys():
+                currentGenes[comparingNum] = 1
+            else:
+                currentGenes[comparingNum] += 1
+
             # set gene to compare next against
             previousGene = gene
 
@@ -957,6 +1004,26 @@ class GeneMain(QMainWindow):
             oneItem = QTableWidgetItem(str('X'))
             oneItem.setTextAlignment(Qt.AlignCenter)
             self.geneTable.setItem(currentRow, ONE_COLUMN, oneItem)
+
+        print('{} - {}'.format(currentRow + 1, currentGenes))
+
+        # color last row
+        colorSetting = self.settings.value(ColorTable.CELL_COLOR_SETTING + str(currentGeneCount))
+        colorNums = [int(num) for num in colorSetting.split(' ')]
+        color = QColor(*colorNums)
+        # color text
+        textColorSetting = self.settings.value(ColorTable.MAJORITY_TEXT_SETTING + str(currentGeneCount))
+        textNums = [int(num) for num in textColorSetting.split(' ')]
+        textColor = QColor(*textNums)
+        # TODO: Figure out minority rule
+        for column in range(totalColumns):
+            item = self.geneTable.item(currentRow, column)
+            # insert blank item if blank cell
+            if item is None:
+                item = QTableWidgetItem('')
+                self.geneTable.setItem(currentRow, column, item)
+            item.setBackground(color)
+            item.setForeground(textColor)
 
     def __sort_genes(self, gene):
         """
