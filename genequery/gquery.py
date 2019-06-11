@@ -797,6 +797,7 @@ class GeneMain(QMainWindow):
     def settings(self):
         preferencesDialog = SettingsDialog()
         preferencesDialog.exec_()
+        self.updateTable()
 
     # WINDOW METHODS -------------------------------------------------------------------------------
     def closeEvent(self, event):
@@ -843,6 +844,9 @@ class GeneMain(QMainWindow):
         Displays Gene data to Table
         :return:
         """
+        # remove any existing cells
+        self.geneTable.setRowCount(0)
+
         # table options
         self.geneTable.setSelectionMode(QTableWidget.NoSelection)
 
@@ -938,11 +942,11 @@ class GeneMain(QMainWindow):
                 print('{} - {}'.format(currentRow + 1, currentGenes))
 
                 # color row
-                colorSetting = self.settings.value(ColorTable.CELL_COLOR_SETTING + str(currentGeneCount))
+                colorSetting = self.settings.value(ColorTable.CELL_COLOR_SETTING + str(currentGeneCount - 1))
                 colorNums = [int(num) for num in colorSetting.split(' ')]
                 color = QColor(*colorNums)
                 # color text
-                textColorSetting = self.settings.value(ColorTable.MAJORITY_TEXT_SETTING + str(currentGeneCount))
+                textColorSetting = self.settings.value(ColorTable.MAJORITY_TEXT_SETTING + str(currentGeneCount - 1))
                 textNums = [int(num) for num in textColorSetting.split(' ')]
                 textColor = QColor(*textNums)
                 # TODO: Figure out minority rule
@@ -1008,11 +1012,11 @@ class GeneMain(QMainWindow):
         print('{} - {}'.format(currentRow + 1, currentGenes))
 
         # color last row
-        colorSetting = self.settings.value(ColorTable.CELL_COLOR_SETTING + str(currentGeneCount))
+        colorSetting = self.settings.value(ColorTable.CELL_COLOR_SETTING + str(currentGeneCount - 1))
         colorNums = [int(num) for num in colorSetting.split(' ')]
         color = QColor(*colorNums)
         # color text
-        textColorSetting = self.settings.value(ColorTable.MAJORITY_TEXT_SETTING + str(currentGeneCount))
+        textColorSetting = self.settings.value(ColorTable.MAJORITY_TEXT_SETTING + str(currentGeneCount - 1))
         textNums = [int(num) for num in textColorSetting.split(' ')]
         textColor = QColor(*textNums)
         # TODO: Figure out minority rule
