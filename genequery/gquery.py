@@ -3,6 +3,8 @@ import pickle
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, colors
 from genequery import Gene
 
 APP_NAME = 'GeneQuery'
@@ -652,13 +654,23 @@ class GeneMain(QMainWindow):
 
         self.settingsAction = self.createAction('Settings', self.settings, None, )
 
+        self.exportExcelAction = self.createAction('Excel', self.exportExcel, None)
+
         # MENUS ------------------------------------------------------------------------------------
+        # file menu
         self.fileMenu = self.menuBar().addMenu('&File')
         self.fileMenuActions = (self.newFileAction, self.openFileAction,
                                 self.saveAction, self.saveAsAction)
         self.fileMenu.addActions(self.fileMenuActions)
         self.fileMenu.addSeparator()
+
+        # export submenu
+        exportSubMenu = self.fileMenu.addMenu('Export as...')
+        exportSubMenu.addAction(self.exportExcelAction)
+
+
         self.fileMenu.addActions([self.settingsAction])
+
 
         # VARIABLES --------------------------------------------------------------------------------
         self.queryData = QueryData()
@@ -798,6 +810,49 @@ class GeneMain(QMainWindow):
         preferencesDialog = SettingsDialog()
         preferencesDialog.exec_()
         self.updateTable()
+
+    @pyqtSlot()
+    def exportExcel(self):
+        """
+        Save the current table output to a .xlsx file
+        """
+        # TODO: Disable Excel Export until a file query is opened
+        # open a save file dialog
+        fileExtensions = ['Excel Spreadsheet (*.xlsx)',
+                          'All Files (*.*)']
+        excelFileName = QFileDialog.getSaveFileName(self,
+                                                    'Save Excel Spreadsheet As...',
+                                                    '',
+                                                    ';;'.join(fileExtensions))
+
+        # if file name was provided, write to file
+        if excelFileName[0] != '':
+
+            # create excel spreadsheet
+            wb = Workbook()
+            ws = wb.active
+            ws.title = 'Gene Predictions'
+
+            # add content to spreadsheet
+            # add headers
+            currentRow = 1
+            for column in range(self.geneTable.columnCount()):
+                headerValue = self.geneTable.horizontalHeaderItem(column).text()
+                cell = ws.cell(row=currentRow, column=column + 1, value=headerValue)
+                cell.alignment = Alignment(horizontal='center')
+                cell.font = Font(bold=True)
+
+            # add content
+            for row in range(self.geneTable.rowCount()):
+                for column in range(self.geneTable.columnCount()):
+                    currCell = self.geneTable.item(row, column)
+                    cellValue = currCell.text() if currCell is not None else ''
+                    # convert an integer string to an integer for spreadsheet functionality
+                    cellValue = int(cellValue) if cellValue.isdecimal() else cellValue
+                    cell = ws.cell(row=row + 2, column=column + 1, value=cellValue)
+                    cell.alignment = Alignment(horizontal='center')
+
+            wb.save(filename=excelFileName[0])
 
     # WINDOW METHODS -------------------------------------------------------------------------------
     def closeEvent(self, event):
