@@ -668,9 +668,7 @@ class GeneMain(QMainWindow):
         exportSubMenu = self.fileMenu.addMenu('Export as...')
         exportSubMenu.addAction(self.exportExcelAction)
 
-
         self.fileMenu.addActions([self.settingsAction])
-
 
         # VARIABLES --------------------------------------------------------------------------------
         self.queryData = QueryData()
@@ -847,10 +845,14 @@ class GeneMain(QMainWindow):
                 for column in range(self.geneTable.columnCount()):
                     currCell = self.geneTable.item(row, column)
                     cellValue = currCell.text() if currCell is not None else ''
+                    if currCell is not None:
+                        color = currCell.background().color().getRgb()
+                        rgbString = ''.join(['{:x}'.format(num) for num in color[:3]])
                     # convert an integer string to an integer for spreadsheet functionality
                     cellValue = int(cellValue) if cellValue.isdecimal() else cellValue
                     cell = ws.cell(row=row + 2, column=column + 1, value=cellValue)
                     cell.alignment = Alignment(horizontal='center')
+                    cell.fill = PatternFill(fgColor=rgbString, fill_type='solid')
 
             wb.save(filename=excelFileName[0])
 
