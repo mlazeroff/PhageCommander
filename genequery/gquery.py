@@ -646,15 +646,15 @@ class GeneMain(QMainWindow):
         self.saveAsAction = self.createAction('Save as...', self.saveAs,
                                               QKeySequence('Ctrl+Shift+S'),
                                               tip='Save gene data')
-        self.saveAsAction.setDisabled(True)
 
         self.saveAction = self.createAction('&Save', self.save, QKeySequence.Save,
                                             tip='Save gene data')
-        self.saveAction.setDisabled(True)
+
 
         self.settingsAction = self.createAction('Settings', self.settings, None, )
 
         self.exportExcelAction = self.createAction('Excel', self.exportExcel, None)
+
 
         # MENUS ------------------------------------------------------------------------------------
         # file menu
@@ -676,9 +676,11 @@ class GeneMain(QMainWindow):
         self.fileOpened = False
         # if unsaved changes are present
         self.dirty = False
+        # if saving is enabled
+        self.saveEnabled = False
 
         self.settings = QSettings(QSettings.IniFormat, QSettings.UserScope, APP_NAME, APP_NAME)
-
+        self.enableActions()
         # SETTINGS ---------------------------------------------------------------------------------
         self.setWindowTitle('GeneQuery')
 
@@ -702,9 +704,9 @@ class GeneMain(QMainWindow):
                 # update open variable
                 self.fileOpened = True
                 self.dirty = True
+                self.saveEnabled = False
                 # enable / disable actions
-                self.saveAsAction.setEnabled(True)
-                self.saveAction.setEnabled(False)
+                self.enableActions()
                 # update window title with temporary file name
                 self.setWindowTitle('GeneQuery - {}'.format('untitled*'))
                 # display gene data
@@ -745,6 +747,8 @@ class GeneMain(QMainWindow):
                     # assign new data
                     self.queryData = tempQueryData
                     self.fileOpened = True
+                    self.saveEnabled = True
+                    self.enableActions()
                     # change window titles
                     baseFileName = os.path.split(self.queryData.fileName)[1]
                     self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
@@ -797,8 +801,10 @@ class GeneMain(QMainWindow):
             baseFileName = os.path.split(self.queryData.fileName)[1]
             self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
             # allow normal saves
-            self.saveAction.setEnabled(True)
+            # self.saveAction.setEnabled(True)
+            self.saveEnabled = True
             self.dirty = False
+            self.enableActions()
             return True
 
         return False
@@ -1099,6 +1105,24 @@ class GeneMain(QMainWindow):
             return gene.stop
         else:
             return gene.start
+
+    def enableActions(self):
+        """
+        Enables / Disables GUI actions
+        :return:
+        """
+        # file open actions
+        if self.fileOpened:
+            self.saveAsAction.setEnabled(True)
+            self.exportExcelAction.setEnabled(True)
+        else:
+            self.saveAsAction.setEnabled(False)
+            self.exportExcelAction.setEnabled(False)
+
+        if self.saveEnabled:
+            self.saveAction.setEnabled(True)
+        else:
+            self.saveAction.setEnabled(False)
 
     def createAction(self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False,
                      signal='triggered()'):
