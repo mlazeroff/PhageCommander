@@ -12,7 +12,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, colors
 
 # Genemark Domains
-FILE_DOMAIN = 'http://exon.biology.gatech.edu/GeneMark/'
+FILE_DOMAIN = 'http://exon.gatech.edu/GeneMark/'
 GM_DOMAIN = 'http://18.220.233.194/genemark'  # Server DNA master uses
 GM_HMM_DOMAIN = 'http://exon.gatech.edu/GeneMark/gmhmmp.cgi'
 GMS_DOMAIN = 'http://exon.gatech.edu/GeneMark/genemarks.cgi'
