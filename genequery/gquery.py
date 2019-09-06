@@ -5,6 +5,11 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, colors
+import Bio.Seq
+import Bio.SeqFeature
+import Bio.SeqRecord
+from Bio import SeqIO
+from Bio.Alphabet import IUPAC
 from genequery import Gene
 
 APP_NAME = 'GeneQuery'
@@ -284,6 +289,8 @@ class QueryData:
         self.fileName = ''
         # tool data
         self.toolData = dict()
+        # sequence
+        self.sequence = ''
 
 
 class NewFileDialog(QDialog):
@@ -527,6 +534,12 @@ class QueryManager(QThread):
         # create GeneFile
         self.geneFile = Gene.GeneFile(self.queryData.fileName, self.queryData.species)
 
+        # load sequence
+        # with open(self.queryData.fileName) as seqFile:
+        #     self.queryData.sequence = seqFile.read().split('\n')[1].lower()
+        for seq_rec in SeqIO.parse(self.queryData.fileName, 'fasta'):
+            self.queryData.sequence = seq_rec
+
         # THREAD ALLOCATIONS -----------------------------------------------------------------------
         self.threads = []
         for tool in self.queryData.tools:
@@ -650,11 +663,11 @@ class GeneMain(QMainWindow):
         self.saveAction = self.createAction('&Save', self.save, QKeySequence.Save,
                                             tip='Save gene data')
 
-
         self.settingsAction = self.createAction('Settings', self.settings, None, )
 
         self.exportExcelAction = self.createAction('Excel', self.exportExcel, None)
 
+        self.exportGenbankAction = self.createAction('Genbank', self.exportGenbank, None)
 
         # MENUS ------------------------------------------------------------------------------------
         # file menu
@@ -667,6 +680,7 @@ class GeneMain(QMainWindow):
         # export submenu
         exportSubMenu = self.fileMenu.addMenu('Export as...')
         exportSubMenu.addAction(self.exportExcelAction)
+        exportSubMenu.addAction(self.exportGenbankAction)
 
         self.fileMenu.addActions([self.settingsAction])
 
@@ -678,6 +692,8 @@ class GeneMain(QMainWindow):
         self.dirty = False
         # if saving is enabled
         self.saveEnabled = False
+
+        self.genes = []
 
         self.settings = QSettings(QSettings.IniFormat, QSettings.UserScope, APP_NAME, APP_NAME)
         self.enableActions()
@@ -820,7 +836,6 @@ class GeneMain(QMainWindow):
         """
         Save the current table output to a .xlsx file
         """
-        # TODO: Disable Excel Export until a file query is opened
         # open a save file dialog
         fileExtensions = ['Excel Spreadsheet (*.xlsx)',
                           'All Files (*.*)']
@@ -865,6 +880,94 @@ class GeneMain(QMainWindow):
                     cell.font = Font(color=fontRgbString)
 
             wb.save(filename=excelFileName[0])
+
+    @pyqtSlot()
+    def exportGenbank(self):
+
+        # open save dialog
+        fileExtensions = ['Genbank (*.gb)',
+                          'All Files (*.*)']
+        genbankFileName = QFileDialog.getSaveFileName(self,
+                                                      'Save Genbank File As...',
+                                                      '',
+                                                      ';;'.join(fileExtensions))
+        # if file was provided
+        if genbankFileName[0] != '':
+            # grab tool count for current genes
+            toolCount = list(self.queryData.tools.values()).count(True)
+
+            allGenes = []
+            for currentSet in self.genes:
+                if len(currentSet) == toolCount:
+                    # check direction of genes
+                    if currentSet[0].direction == '+':
+
+                        # stop is the same for + direction
+                        five_val = currentSet[0].stop
+
+                        # count number of occurrences for each start
+                        starts = {}
+                        for gene in currentSet:
+                            if gene.start in starts:
+                                starts[gene.start] += 1
+                            else:
+                                starts[gene.start] = 1
+
+                        currentMax = list(starts.items())[0]
+                        for key, val in starts.items():
+                            if val > currentMax[1]:
+                                currentMax = (key, val)
+
+                        three_val = currentMax[0]
+
+                    else:
+
+                        # start is the same for - direction
+                        three_val = currentSet[0].start
+
+                        # count number of occurrences for each stop
+                        starts = {}
+                        for gene in currentSet:
+                            if gene.stop in starts:
+                                starts[gene.stop] += 1
+                            else:
+                                starts[gene.stop] = 1
+
+                        currentMax = list(starts.items())[0]
+                        for key, val in starts.items():
+                            if val > currentMax[1]:
+                                currentMax = (key, val)
+
+                        five_val = currentMax[0]
+
+                    allGenes.append((currentSet[0].direction, three_val, five_val))
+
+            # create Genbank file
+            seqString = str(self.queryData.sequence.seq).lower()
+            seq = Bio.Seq.Seq(seqString, IUPAC.unambiguous_dna)
+            features = []
+            for ind, gene in enumerate(allGenes):
+                direction = 1 if gene[0] == '+' else -1
+                geneFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene[1] - 1, gene[2]),
+                                                        type='gene',
+                                                        qualifiers={'gene': ind},
+                                                        strand=direction
+                                                        )
+                cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene[1] - 1, gene[2]),
+                                                       type='CDS',
+                                                       qualifiers={'gene': ind},
+                                                       strand=direction)
+                features.append(geneFeature)
+                features.append(cdsFeature)
+
+            gbRecord = Bio.SeqRecord.SeqRecord(seq, features=features,
+                                               name=os.path.split(genbankFileName[0])[1].split('.')[0])
+            SeqIO.write([gbRecord], genbankFileName[0], 'genbank')
+
+            # display save status
+            self.status.showMessage('Exported Genbank file to: {}'.format(genbankFileName[0]), 5000)
+
+
 
     # WINDOW METHODS -------------------------------------------------------------------------------
     def closeEvent(self, event):
@@ -923,6 +1026,9 @@ class GeneMain(QMainWindow):
             genes += self.queryData.toolData[tool]
         genes = sorted(genes, key=self.__sort_genes)
 
+        # reset genes
+        self.genes = []
+
         # calculate columns for tools
         toolNumber = len(self.queryData.toolData.keys())
         toolColumns = toolNumber * 4 + toolNumber - 1
@@ -955,6 +1061,7 @@ class GeneMain(QMainWindow):
         self.geneTable.insertRow(currentRow)
         previousGene = genes[0]
         currentGeneCount = 1
+        currentGeneSet = [genes[0]]
         currentGenes = dict()
         geneIndex = headerIndexes[previousGene.identity]
         # direction
@@ -991,6 +1098,7 @@ class GeneMain(QMainWindow):
             # same gene - add to current row
             if gene == previousGene:
                 currentGeneCount += 1
+                currentGeneSet.append(gene)
             # different gene - create new row
             else:
                 # record TOTAL_CALLS, ALL and ONE for previous gene
@@ -1031,6 +1139,10 @@ class GeneMain(QMainWindow):
                 currentGenes = dict()
                 currentRow += 1
                 self.geneTable.insertRow(currentRow)
+
+                # add full set to genes
+                self.genes.append(currentGeneSet)
+                currentGeneSet = [gene]
 
             # add gene to table
             # direction
@@ -1076,6 +1188,9 @@ class GeneMain(QMainWindow):
             oneItem.setTextAlignment(Qt.AlignCenter)
             self.geneTable.setItem(currentRow, ONE_COLUMN, oneItem)
 
+        # append last set of genes
+        self.genes.append(currentGeneSet)
+
         print('{} - {}'.format(currentRow + 1, currentGenes))
 
         # color last row
@@ -1115,9 +1230,11 @@ class GeneMain(QMainWindow):
         if self.fileOpened:
             self.saveAsAction.setEnabled(True)
             self.exportExcelAction.setEnabled(True)
+            self.exportGenbankAction.setEnabled(True)
         else:
             self.saveAsAction.setEnabled(False)
             self.exportExcelAction.setEnabled(False)
+            self.exportGenbankAction.setEnabled(False)
 
         if self.saveEnabled:
             self.saveAction.setEnabled(True)

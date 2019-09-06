@@ -388,6 +388,9 @@ class Gene:
                                                                     self.stop,
                                                                     self.length)
 
+    def __repr__(self):
+        return '({}, {}, {})'.format(self.direction, self.start, self.stop)
+
 
 class GeneParse:
     """
