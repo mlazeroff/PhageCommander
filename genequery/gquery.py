@@ -967,8 +967,6 @@ class GeneMain(QMainWindow):
             # display save status
             self.status.showMessage('Exported Genbank file to: {}'.format(genbankFileName[0]), 5000)
 
-
-
     # WINDOW METHODS -------------------------------------------------------------------------------
     def closeEvent(self, event):
         if self.okToContinue():
@@ -1024,6 +1022,11 @@ class GeneMain(QMainWindow):
         genes = []
         for tool in self.queryData.toolData:
             genes += self.queryData.toolData[tool]
+
+        # nothing to display - exit
+        if len(genes) == 0:
+            return
+
         genes = sorted(genes, key=self.__sort_genes)
 
         # reset genes
