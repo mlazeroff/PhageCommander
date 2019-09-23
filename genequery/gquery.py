@@ -212,7 +212,7 @@ class ColorTable(QWidget):
 
     def resetToDefaultAll(self):
         """
-        Resets all rows to default colors
+        Resets all rows in ColorSettings dialog to default colors
         """
         # prompt user if they wish to reset
         response = QMessageBox.warning(self,
@@ -244,6 +244,40 @@ class ColorTable(QWidget):
                 minorityItem.setBackground(cellColor)
                 cellColorStr = ' '.join([str(x) for x in cellColor.getRgb()[:3]])
                 self.settings.setValue(self.CELL_COLOR_SETTING + str(row), cellColorStr)
+
+    @staticmethod
+    def checkDefaultSettings(settings):
+        """
+        Checks if the default color settings exist in the QSettings. If not, populates them
+        :param settings: QSettings
+        """
+        cellColorSettings = [settings.value(ColorTable.CELL_COLOR_SETTING + str(i)) for i in range(len(TOOL_NAMES))]
+        majorityColorSettings = [settings.value(ColorTable.MAJORITY_TEXT_SETTING + str(i)) for i in
+                                 range(len(TOOL_NAMES))]
+        minorityColorSettings = [settings.value(ColorTable.MINORITY_TEXT_SETTING + str(i)) for i in
+                                 range(len(TOOL_NAMES))]
+
+        if None in cellColorSettings or None in majorityColorSettings or None in minorityColorSettings:
+            ColorTable._setDefaultSettings(settings)
+
+    @staticmethod
+    def _setDefaultSettings(settings):
+        """
+        Sets the settings related to cell colors to default values
+        :param settings: QSettings object
+        """
+        for i in range(len(TOOL_NAMES)):
+            # CELL COLORS
+            defaultColorStr = ' '.join(str(color) for color in ColorTable._DEFAULT_CELL_COLORS[i])
+            settings.setValue(ColorTable.CELL_COLOR_SETTING + str(i), defaultColorStr)
+
+            # MAJORITY COLOR
+            defaultColorStr = ' '.join(str(color) for color in ColorTable._DEFAULT_MAJORITY_COLORS[i])
+            settings.setValue(ColorTable.MAJORITY_TEXT_SETTING + str(i), defaultColorStr)
+
+            # MINORITY COLOR
+            defaultColorStr = ' '.join(str(color) for color in ColorTable._DEFAULT_MINORITY_COLORS[i])
+            settings.setValue(ColorTable.MINORITY_TEXT_SETTING + str(i), defaultColorStr)
 
 
 class SettingsDialog(QDialog):
@@ -695,7 +729,10 @@ class GeneMain(QMainWindow):
 
         self.genes = []
 
+        # Get Settings, populate defaults if they do not exist
         self.settings = QSettings(QSettings.IniFormat, QSettings.UserScope, APP_NAME, APP_NAME)
+        self.checkDefaultSettings()
+
         self.enableActions()
         # SETTINGS ---------------------------------------------------------------------------------
         self.setWindowTitle('GeneQuery')
@@ -1271,6 +1308,14 @@ class GeneMain(QMainWindow):
             action.setCheckable(True)
 
         return action
+
+    def checkDefaultSettings(self):
+        """
+        Check for require default settings
+        If they do not exist - populate them
+        """
+        # COLOR SETTINGS
+        ColorTable.checkDefaultSettings(self.settings)
 
 
 # MAIN FUNCTION
