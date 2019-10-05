@@ -535,6 +535,17 @@ class GeneParse:
         for current_line in hmm_data:
             if current_line != '':
                 data = [x for x in current_line.strip().split(' ') if x != '']
+                # check for weird characters with gene sequence ends (Ex: start = '<2')
+                nonNumChars = False
+                for ind, char in enumerate(data[2]):
+                    if not char.isnumeric():
+                        nonNumChars = True
+                    elif char.isnumeric():
+                        if not nonNumChars:
+                            break
+                        else:
+                            data[2] = data[2][ind:]
+
                 genes.append(Gene(data[2], data[3], data[1], identity=identity))
 
         return genes
