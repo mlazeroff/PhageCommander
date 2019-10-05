@@ -659,8 +659,22 @@ class QueryDialog(QDialog):
         """
         # if successful query - display success message
         if self.progressBar.value() == self.progressBar.maximum():
-            QMessageBox.information(self, 'Done', 'Done! Query Successful')
-            QDialog.accept(self)
+            # check for any errors returned
+            errors = dict()
+            for tool in self.queryData.toolData:
+                if isinstance(self.queryData.toolData[tool], Exception):
+                    errors[tool] = self.queryData.toolData[tool]
+
+            # errors exist
+            if len(errors) != 0:
+                # print out all tools and their errors
+                errorStr = ['{}: {}'.format(tool.upper(), error) for tool, error in errors.items()]
+                QMessageBox.information(self, 'Errors while Querying', '\n'.join(errorStr))
+                QDialog.reject(self)
+            else:
+                # success
+                QMessageBox.information(self, 'Done', 'Done! Query Successful')
+                QDialog.accept(self)
         else:
             QDialog.reject(self)
 
