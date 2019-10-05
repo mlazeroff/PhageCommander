@@ -36,9 +36,9 @@ TOOL_METHODS = {'gm': [Gene.GeneFile.genemark_query,
 
 
 class ColorTable(QWidget):
-    CELL_COLOR_SETTING = 'table/cell_color/'
-    MAJORITY_TEXT_SETTING = 'table/majority_text_color/'
-    MINORITY_TEXT_SETTING = 'table/minority_text_color/'
+    CELL_COLOR_SETTING = 'TABLE/cell_color/'
+    MAJORITY_TEXT_SETTING = 'TABLE/majority_text_color/'
+    MINORITY_TEXT_SETTING = 'TABLE/minority_text_color/'
     _TABLE_COLUMN_HEADERS = ['Cell Color', 'Majority Text', 'Minority Text']
     _TABLE_MAJORITY_MINORITY_DEFAULT_TEXT = '4099'
     _CELL_COLOR_COLUMN = 0
@@ -333,7 +333,9 @@ class NewFileDialog(QDialog):
     :returns: list of tools user selected to make queries to
     """
 
-    def __init__(self, queryData, parent=None):
+    _LAST_FASTA_FILE_LOCATION_SETTING = 'NEW_FILE_DIALOG/last_fasta_location'
+
+    def __init__(self, queryData, settings, parent=None):
         """
         Initialize Dialog
         :param queryData: ToolSpecies object
@@ -341,6 +343,7 @@ class NewFileDialog(QDialog):
         """
         super(NewFileDialog, self).__init__(parent)
         self.queryData = queryData
+        self.settings = settings
 
         mainLayout = QVBoxLayout()
         checkBoxLayout = QGridLayout()
@@ -493,11 +496,15 @@ class NewFileDialog(QDialog):
         """
         Open a dialog for user to select DNA file
         """
-        file = QFileDialog.getOpenFileName(self, 'Open DNA File')
+        last_fasta_file_location = self.settings.value(self._LAST_FASTA_FILE_LOCATION_SETTING)
+        file = QFileDialog.getOpenFileName(self, 'Open DNA File', last_fasta_file_location)
 
         # if file was chosen, set file line edit
         if file[0]:
             self.fileEdit.setText(file[0])
+            # set new last_fasta_location
+            fileFolder = os.path.split(file[0])[0]
+            self.settings.setValue(self._LAST_FASTA_FILE_LOCATION_SETTING, fileFolder)
 
     def disableSpeciesCheck(self):
         """
@@ -509,6 +516,24 @@ class NewFileDialog(QDialog):
         else:
             self.speciesComboBox.setDisabled(False)
 
+    @staticmethod
+    def checkDefaultSettings(settings):
+        """
+        Checks if required settings exist - if not, populates them
+        :param settings: QSettings obj
+        """
+        # LAST FASTA FILE LOCATION
+        if settings.value(NewFileDialog._LAST_FASTA_FILE_LOCATION_SETTING) is None:
+            NewFileDialog._setDefaultSettings(settings)
+
+    @staticmethod
+    def _setDefaultSettings(settings):
+        """
+        Populates the default values for the required settings
+        :param settings: QSettings obj
+        """
+        # LAST FASTA FILE LOCATION
+        settings.setValue(NewFileDialog._LAST_FASTA_FILE_LOCATION_SETTING, '')
 
 class QueryThread(QThread):
     """
@@ -770,7 +795,7 @@ class GeneMain(QMainWindow):
             return
 
         # open query dialog
-        dialog = NewFileDialog(self.queryData)
+        dialog = NewFileDialog(self.queryData, self.settings)
         # if user initiates a query
         if dialog.exec_():
             queryDialog = QueryDialog(self.queryData)
@@ -1336,6 +1361,8 @@ class GeneMain(QMainWindow):
         Check for require default settings
         If they do not exist - populate them
         """
+        # NewFileDialog SETTINGS
+        NewFileDialog.checkDefaultSettings(self.settings)
         # COLOR SETTINGS
         ColorTable.checkDefaultSettings(self.settings)
 
