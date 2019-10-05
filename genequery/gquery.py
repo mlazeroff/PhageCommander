@@ -357,44 +357,42 @@ class NewFileDialog(QDialog):
         genemarkLabel = QLabel('Genemark')
         genemarkLabel.setFont(labelFont)
         gmBox = QCheckBox('Genemark')
-        gmBox.setChecked(True)
-        hmmBox = QCheckBox('HMM')
-        hmmBox.setChecked(True)
+        self.hmmBox = QCheckBox('HMM')
         heuristicBox = QCheckBox('Heuristic')
-        heuristicBox.setChecked(True)
         gmsBox = QCheckBox('GMS')
-        gmsBox.setChecked(True)
         gms2Box = QCheckBox('GMS2')
-        gms2Box.setChecked(True)
 
         # glimmer box
         glimmerLabel = QLabel('Glimmer')
         glimmerLabel.setFont(labelFont)
         glimmerBox = QCheckBox('Glimmer')
-        glimmerBox.setChecked(True)
 
         # prodigal box
         prodigalLabel = QLabel('Prodigal')
         prodigalLabel.setFont(labelFont)
         prodigalBox = QCheckBox('Prodigal')
-        prodigalBox.setChecked(True)
 
         # dictionary mapping tools to checkboxes
         self.toolCheckBoxes = dict()
         self.toolCheckBoxes['gm'] = gmBox
-        self.toolCheckBoxes['hmm'] = hmmBox
+        self.toolCheckBoxes['hmm'] = self.hmmBox
         self.toolCheckBoxes['heuristic'] = heuristicBox
         self.toolCheckBoxes['gms'] = gmsBox
         self.toolCheckBoxes['gms2'] = gms2Box
         self.toolCheckBoxes['glimmer'] = glimmerBox
         self.toolCheckBoxes['prodigal'] = prodigalBox
+        for box in self.toolCheckBoxes.values():
+            # set all boxes to default to being checked
+            box.setChecked(True)
+            # check to disable the species combobox on every click of a box
+            box.stateChanged.connect(self.disableSpeciesCheck)
 
         # species combo box
         speciesLabel = QLabel('Species:')
         speciesLabel.setFont(labelFont)
         self.speciesComboBox = QComboBox()
         self.speciesComboBox.addItems(Gene.SPECIES)
-        self.speciesComboBox.setMaximumWidth(200)
+        self.speciesComboBox.setMaximumWidth(250)
 
         # dna file input
         fileLabel = QLabel('Fasta File:')
@@ -413,7 +411,7 @@ class NewFileDialog(QDialog):
         # genemark
         checkBoxLayout.addWidget(genemarkLabel, 0, 0)
         checkBoxLayout.addWidget(gmBox, 1, 0)
-        checkBoxLayout.addWidget(hmmBox, 1, 1)
+        checkBoxLayout.addWidget(self.hmmBox, 1, 1)
         checkBoxLayout.addWidget(heuristicBox, 1, 2)
         checkBoxLayout.addWidget(gmsBox, 2, 0)
         checkBoxLayout.addWidget(gms2Box, 2, 1)
@@ -500,6 +498,16 @@ class NewFileDialog(QDialog):
         # if file was chosen, set file line edit
         if file[0]:
             self.fileEdit.setText(file[0])
+
+    def disableSpeciesCheck(self):
+        """
+        Disables the species comboBox if none of the selected tools require it
+        * Only Hmm uses the species comboBox
+        """
+        if not self.hmmBox.isChecked():
+            self.speciesComboBox.setDisabled(True)
+        else:
+            self.speciesComboBox.setDisabled(False)
 
 
 class QueryThread(QThread):
