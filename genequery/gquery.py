@@ -392,7 +392,7 @@ class NewFileDialog(QDialog):
         speciesLabel.setFont(labelFont)
         self.speciesComboBox = QComboBox()
         self.speciesComboBox.addItems(Gene.SPECIES)
-        self.speciesComboBox.setMaximumWidth(200)
+        self.speciesComboBox.setMaximumWidth(250)
 
         # dna file input
         fileLabel = QLabel('Fasta File:')
@@ -508,6 +508,7 @@ class NewFileDialog(QDialog):
             self.speciesComboBox.setDisabled(True)
         else:
             self.speciesComboBox.setDisabled(False)
+
 
 class QueryThread(QThread):
     """
