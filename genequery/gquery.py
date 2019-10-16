@@ -535,6 +535,7 @@ class NewFileDialog(QDialog):
         # LAST FASTA FILE LOCATION
         settings.setValue(NewFileDialog._LAST_FASTA_FILE_LOCATION_SETTING, '')
 
+
 class QueryThread(QThread):
     """
     Thread for making performing the call to a gene prediction tool and parsing the data
@@ -794,11 +795,16 @@ class GeneMain(QMainWindow):
         if not self.okToContinue():
             return
 
+        # temporary data in case user quits the dialogs
+        tmpQueryData = QueryData()
         # open query dialog
-        dialog = NewFileDialog(self.queryData, self.settings)
+        dialog = NewFileDialog(tmpQueryData, self.settings)
         # if user initiates a query
         if dialog.exec_():
+            # query tools
+            self.queryData = tmpQueryData
             queryDialog = QueryDialog(self.queryData)
+
             # query to tools is successful
             if queryDialog.exec_():
                 # update open variable
@@ -1365,6 +1371,12 @@ class GeneMain(QMainWindow):
         NewFileDialog.checkDefaultSettings(self.settings)
         # COLOR SETTINGS
         ColorTable.checkDefaultSettings(self.settings)
+
+    def resetQueryData(self):
+        """
+        Resets the current data
+        """
+        self.queryData = QueryData()
 
 
 # MAIN FUNCTION
