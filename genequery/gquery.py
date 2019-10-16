@@ -1219,8 +1219,6 @@ class GeneMain(QMainWindow):
                     oneItem.setTextAlignment(Qt.AlignCenter)
                     self.geneTable.setItem(currentRow, ONE_COLUMN, oneItem)
 
-                print('{} - {}'.format(currentRow + 1, currentGenes))
-
                 # color row
                 colorSetting = self.settings.value(ColorTable.CELL_COLOR_SETTING + str(currentGeneCount - 1))
                 colorNums = [int(num) for num in colorSetting.split(' ')]
