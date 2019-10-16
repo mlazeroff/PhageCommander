@@ -830,6 +830,10 @@ class GeneMain(QMainWindow):
         Open a query data file
         :param fileName: name of the file
         """
+        # check for unsaved progressed
+        if not self.okToContinue():
+            return
+
         # open file dialog
         fileExtensions = ['GQ Files (*.gq)', 'All Files (*.*)']
         openFileName = QFileDialog.getOpenFileName(self,
