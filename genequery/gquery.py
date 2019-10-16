@@ -10,6 +10,7 @@ import Bio.SeqFeature
 import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
+from typing import List, Callable
 from genequery import Gene
 
 APP_NAME = 'GeneQuery'
@@ -322,6 +323,8 @@ class QueryData:
         # path of the DNA file
         self.fileName = ''
         # tool data
+        # Key - tool (from TOOL_NAMES)
+        # Value - List of Genes
         self.toolData = dict()
         # sequence
         self.sequence = ''
@@ -864,6 +867,7 @@ class GeneMain(QMainWindow):
                     self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
                     # update table
                     self.updateTable()
+
             # opening file was unsuccessful
             except FileNotFoundError:
                 QMessageBox.warning(self, 'File Does not Exist',
@@ -991,6 +995,8 @@ class GeneMain(QMainWindow):
             toolCount = list(self.queryData.tools.values()).count(True)
 
             allGenes = []
+            # For each gene, find which set of starts/stops is the majority
+            # Majority is used to populate the genbank file
             for currentSet in self.genes:
                 if len(currentSet) == toolCount:
                     # check direction of genes
@@ -999,7 +1005,7 @@ class GeneMain(QMainWindow):
                         # stop is the same for + direction
                         five_val = currentSet[0].stop
 
-                        # count number of occurrences for each start
+                        # count the number of occurrences for each start
                         starts = {}
                         for gene in currentSet:
                             if gene.start in starts:
@@ -1007,6 +1013,7 @@ class GeneMain(QMainWindow):
                             else:
                                 starts[gene.start] = 1
 
+                        # find the start with the max number of occurrences
                         currentMax = list(starts.items())[0]
                         for key, val in starts.items():
                             if val > currentMax[1]:
@@ -1027,6 +1034,7 @@ class GeneMain(QMainWindow):
                             else:
                                 starts[gene.stop] = 1
 
+                        # find the stop with the max number of occurrences
                         currentMax = list(starts.items())[0]
                         for key, val in starts.items():
                             if val > currentMax[1]:
@@ -1121,7 +1129,7 @@ class GeneMain(QMainWindow):
         if len(genes) == 0:
             return
 
-        genes = sorted(genes, key=self.__sort_genes)
+        genes = sortGenes(genes)
 
         # reset genes
         self.genes = []
@@ -1288,8 +1296,6 @@ class GeneMain(QMainWindow):
         # append last set of genes
         self.genes.append(currentGeneSet)
 
-        print('{} - {}'.format(currentRow + 1, currentGenes))
-
         # color last row
         colorSetting = self.settings.value(ColorTable.CELL_COLOR_SETTING + str(currentGeneCount - 1))
         colorNums = [int(num) for num in colorSetting.split(' ')]
@@ -1376,11 +1382,73 @@ class GeneMain(QMainWindow):
         # COLOR SETTINGS
         ColorTable.checkDefaultSettings(self.settings)
 
-    def resetQueryData(self):
-        """
-        Resets the current data
-        """
-        self.queryData = QueryData()
+
+# HELPER FUNCTIONS
+def getGeneComparison(gene: Gene.Gene) -> int:
+    """
+    Helper function to retrieve the stop/start of a gene depending on its direction
+    :param gene: Gene
+    :return: the start/stop of a Gene
+    """
+    if gene.direction == '+':
+        return gene.stop
+    else:
+        return gene.start
+
+
+def sortGenes(genes: List[Gene.Gene]) -> List[Gene.Gene]:
+    """
+    Sort Genes according to their start/stop depending on the direction of the gene
+    * Forward direction genes are sorted by their stop
+    * Negative direction genes are sorted by their start
+    :param genes: List of Genes to sort
+    :return: List[Gene] sorted by start/stop depending on direction of gene
+    """
+    return sorted(genes, key=getGeneComparison)
+
+
+def filterGenes(genes: List[Gene.Gene], comparisonFunc: Callable[[int], bool]) -> List[List[Gene.Gene]]:
+    """
+    Filters the genes to only those where there are <limit> or more of that gene
+    Ex: greaterThanThreeGenes = filterGenes(genes, lambda x: x > 3)
+    :param genes: List[Gene]
+    :param comparisonFunc: a function which takes a quantity and returns a bool based on that value
+        * Arg 1: Quantity (int)
+        * Result: bool
+        * Ex: lambda x: x <= 10
+    :return: List[List[Gene]] in order of stop/starts
+    """
+    filteredGenes = []
+    sortedGenes = sortGenes(genes)
+
+    # group the genes according to their stops/starts
+    # discard groups with less than <limit> items
+    currentGroup = [sortedGenes[0]]
+    previousGene = sortedGenes[0]
+    for gene in sortedGenes[1:]:
+        # if the current gene is the same as the previous, add to the same group
+        if gene == previousGene:
+            currentGroup.append(gene)
+
+        # different genes, create a new group
+        else:
+            # if comparison is satisfactory, add to genes to be returned
+            # else, they're dropped
+            if comparisonFunc(len(currentGroup)):
+                filteredGenes.append(currentGroup)
+
+            # new group of genes
+            currentGroup = [gene]
+
+        previousGene = gene
+
+    return filteredGenes
+
+
+
+
+
+
 
 
 # MAIN FUNCTION
