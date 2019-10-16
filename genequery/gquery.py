@@ -1410,7 +1410,9 @@ def sortGenes(genes: List[Gene.Gene]) -> List[Gene.Gene]:
 def filterGenes(genes: List[Gene.Gene], comparisonFunc: Callable[[int], bool]) -> List[List[Gene.Gene]]:
     """
     Filters the genes to only those where there are <limit> or more of that gene
-    Ex: greaterThanThreeGenes = filterGenes(genes, lambda x: x > 3)
+    Ex: Filter for genes which there are more than 3 of each
+        greaterThanThreeGenes = filterGenes(genes, lambda x: x > 3)
+
     :param genes: List[Gene]
     :param comparisonFunc: a function which takes a quantity and returns a bool based on that value
         * Arg 1: Quantity (int)
@@ -1443,12 +1445,6 @@ def filterGenes(genes: List[Gene.Gene], comparisonFunc: Callable[[int], bool]) -
         previousGene = gene
 
     return filteredGenes
-
-
-
-
-
-
 
 
 # MAIN FUNCTION
