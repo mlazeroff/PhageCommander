@@ -21,6 +21,7 @@ class exportDialog(QDialog):
     _GREATER_THAN_BUTTON_TEXT = 'Greater than'
     _ALL_BUTTON_TEXT = 'ALL'
     _ONE_BUTTON_TEXT = 'ONE'
+    _INVALID_SAVE_FILE_BORDER = 'border: 1px solid red'
 
     def __init__(self, queryData, settings, parent=None):
         super(exportDialog, self).__init__(parent)
@@ -231,20 +232,32 @@ class exportDialog(QDialog):
         Checks if the file path given in the line edit is valid
         """
 
+        invalid = False
+        # if empty save file
+        if self.saveLineEdit.text() == '':
+            self.saveLineEdit.setStyleSheet(self._INVALID_SAVE_FILE_BORDER)
+            QMessageBox.warning(self,
+                                'File Not Given',
+                                'Select a file to save to.')
+            invalid = True
+
         # if the given directory exists
-        if not os.path.isdir(os.path.split(self.saveLineEdit.text())[0]):
-            self.saveLineEdit.setStyleSheet('border: 1px solid red')
+        elif not os.path.isdir(os.path.split(self.saveLineEdit.text())[0]):
+            self.saveLineEdit.setStyleSheet(self._INVALID_SAVE_FILE_BORDER)
             QMessageBox.warning(self,
                                 'Directory Does Not Exist',
                                 'Selected directory does not exist.')
-            return False
+            invalid = True
 
         # check if a directory and file were given
         elif os.path.split(self.saveLineEdit.text())[1] == '':
-            self.saveLineEdit.setStyleSheet('border: 1px solid red')
+            self.saveLineEdit.setStyleSheet(self._INVALID_SAVE_FILE_BORDER)
             QMessageBox.warning(self,
                                 'Select a Save File',
                                 'Please select a file to save to.')
+            invalid = True
+
+        if invalid:
             return False
 
         # save file is valid
@@ -256,6 +269,6 @@ class exportDialog(QDialog):
 if __name__ == '__main__':
     from genequery.gquery import QueryData
     app = QApplication([])
-    dig = exportDialog(QueryData())
+    dig = exportDialog(QueryData(), QSettings())
     dig.show()
     app.exec_()
