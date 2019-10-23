@@ -489,13 +489,14 @@ class GeneUtils:
                                                     strand=direction)
             cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
                                                    type='CDS',
-                                                   qualifiers={'gene', ind},
+                                                   qualifiers={'gene': ind},
                                                    strand=direction)
             features.append(geneFeature)
             features.append(cdsFeature)
 
         # create genbank file from genes and write to file
-        gbRecord = Bio.SeqRecord.SeqRecord(seq, features=features, name=fileName)
+        gbRecord = Bio.SeqRecord.SeqRecord(seq, features=features,
+                                           name=os.path.split(fileName)[1].split('.')[0])
         SeqIO.write([gbRecord], fileName, 'genbank')
 
 
@@ -937,4 +938,11 @@ def excel_write(output_directory, files, sequence):
 
 
 if __name__ == '__main__':
-    pass
+    file = "D:\\mdlaz\\Documents\\college\\Research\\programs\\GeneQuery\\tests\\fasta_files\\Diane complete.fasta"
+    for seq in SeqIO.parse(file, 'fasta'):
+        sequence = seq
+    gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
+    gfile.genemarkhmm_query()
+    data = gfile.query_data['hmm']
+    myGenes = GeneParse.parse_genemarkHmm(data)
+    GeneUtils.genbankToFile(str(sequence.seq).lower(), myGenes, 'genbank.gb')
