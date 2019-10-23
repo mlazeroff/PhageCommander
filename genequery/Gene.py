@@ -7,9 +7,15 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import os
+from typing import Callable, List
 from subprocess import Popen, PIPE
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, colors
+import Bio.Seq
+import Bio.SeqFeature
+import Bio.SeqRecord
+from Bio import SeqIO
+from Bio.Alphabet import IUPAC
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.gatech.edu/GeneMark/'
@@ -36,19 +42,18 @@ class Error(Exception):
     pass
 
 
-class GeneFileError(Error):
-    """
-    Raised when no result from GeneMark is returned
-    """
-
-    def __init__(self, message):
-        self.message = message
-
-
 class GeneFile:
     """
     Class for querying GeneMark tools for a DNA sequence
     """
+
+    class GeneFileError(Error):
+        """
+        Raised when no result from GeneMark is returned
+        """
+
+        def __init__(self, message):
+            self.message = message
 
     def __init__(self, sequence_file, species):
         """
@@ -74,7 +79,7 @@ class GeneFile:
 
         # Gene species - Check if compatible type, if not, exit
         if species not in SPECIES:
-            raise GeneFileError(
+            raise GeneFile.GeneFileError(
                 "{} is not a compatible species type - See species.txt".format(species))
         self.species = species
 
@@ -100,8 +105,8 @@ class GeneFile:
         # check for job_key in response, if not raise error
         try:
             if 'job_key' not in file_post.text:
-                raise GeneFileError("Glimmer POST #1: Invalid response")
-        except GeneFileError:
+                raise GeneFile.GeneFileError("Glimmer POST #1: Invalid response")
+        except GeneFile.GeneFileError:
             raise
 
         # get job_key from response
@@ -119,7 +124,7 @@ class GeneFile:
                 return_post = requests.post(GLIMMER_DOMAIN, data=payload, headers=headers)
                 return_post.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            raise GeneFileError(
+            raise GeneFile.GeneFileError(
                 'Glimmer Server Error: Check for DNA for proper format or check server status')
 
         self.query_data['glimmer'] = return_post.content.decode('utf-8')
@@ -142,8 +147,8 @@ class GeneFile:
         # check for job_key in response, if not raise error
         try:
             if 'job_key' not in file_post.text:
-                raise GeneFileError("GeneMark - Invalid Response from server")
-        except GeneFileError:
+                raise GeneFile.GeneFileError("GeneMark - Invalid Response from server")
+        except GeneFile.GeneFileError:
             raise
 
         # get job_key from response
@@ -163,7 +168,7 @@ class GeneFile:
                 return_post.raise_for_status()
         except requests.exceptions.HTTPError as e:
             print(e)
-            raise GeneFileError(
+            raise GeneFile.GeneFileError(
                 'GeneMark Server Error: Check for DNA for proper format or check server status')
 
         self.query_data['gm'] = return_post.content.decode('utf-8')
@@ -194,8 +199,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneFileError("GeneMark Hmm")
-        except GeneFileError:
+                raise GeneFile.GeneFileError("GeneMark Hmm")
+        except GeneFile.GeneFileError:
             raise
 
         getHmmFile = requests.get(FILE_DOMAIN + file_location)
@@ -226,8 +231,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneFileError("GeneMarkS")
-        except GeneFileError:
+                raise GeneFile.GeneFileError("GeneMarkS")
+        except GeneFile.GeneFileError:
             raise
 
         getGmsFile = requests.get(FILE_DOMAIN + file_location)
@@ -262,8 +267,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneFileError("GeneMark Heuristic")
-        except GeneFileError:
+                raise GeneFile.GeneFileError("GeneMark Heuristic")
+        except GeneFile.GeneFileError:
             raise
 
         getHeuristicFile = requests.get(FILE_DOMAIN + file_location)
@@ -294,8 +299,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneFileError("GeneMarkS2")
-        except GeneFileError:
+                raise GeneFile.GeneFileError("GeneMarkS2")
+        except GeneFile.GeneFileError:
             raise
 
         getGMS2File = requests.get(FILE_DOMAIN + file_location)
@@ -318,7 +323,7 @@ class GeneFile:
         # check for error, exit if so
         if proc.returncode != 0:
             print(stderr)
-            raise GeneFileError("Prodigal")
+            raise GeneFile.GeneFileError("Prodigal")
 
         self.query_data['prodigal'] = stdout.decode('utf-8')
 
@@ -390,6 +395,151 @@ class Gene:
 
     def __repr__(self):
         return '({}, {}, {})'.format(self.direction, self.start, self.stop)
+
+
+class GeneUtils:
+    """
+    Class for operations relating to Genes
+    """
+
+    @staticmethod
+    def getGeneComparison(gene: Gene) -> int:
+        """
+        Helper function to retrieve the stop/start of a gene depending on its direction
+        :param gene: Gene
+        :return: the start/stop of a Gene
+        """
+        if gene.direction == '+':
+            return gene.stop
+        else:
+            return gene.start
+
+    @staticmethod
+    def sortGenes(genes: List[Gene]) -> List[Gene]:
+        """
+        Sort Genes according to their start/stop depending on the direction of the gene
+        * Forward direction genes are sorted by their stop
+        * Negative direction genes are sorted by their start
+        :param genes: List of Genes to sort
+        :return: List[Gene] sorted by start/stop depending on direction of gene
+        """
+        return sorted(genes, key=GeneUtils.getGeneComparison)
+
+    @staticmethod
+    def filterGenes(genes: List[Gene], comparisonFunc: Callable[[int], bool]) -> List[List[Gene]]:
+        """
+        Filters the genes to only those where there are <limit> or more of that gene
+        Ex: Filter for genes which there are more than 3 of each
+            greaterThanThreeGenes = filterGenes(genes, lambda x: x > 3)
+
+        :param genes: List[Gene]
+        :param comparisonFunc: a function which takes a quantity and returns a bool based on that value
+            * Arg 1: Quantity (int)
+            * Result: bool
+            * Ex: lambda x: x <= 10
+        :return: List[List[Gene]] in order of stop/starts
+        """
+        filteredGenes = []
+        sortedGenes = GeneUtils.sortGenes(genes)
+
+        # group the genes according to their stops/starts
+        # discard groups with less than <limit> items
+        currentGroup = [sortedGenes[0]]
+        previousGene = sortedGenes[0]
+        for gene in sortedGenes[1:]:
+            # if the current gene is the same as the previous, add to the same group
+            if gene == previousGene:
+                currentGroup.append(gene)
+
+            # different genes, create a new group
+            else:
+                # if comparison is satisfactory, add to genes to be returned
+                # else, they're dropped
+                if comparisonFunc(len(currentGroup)):
+                    filteredGenes.append(currentGroup)
+
+                # new group of genes
+                currentGroup = [gene]
+
+            previousGene = gene
+
+        # add last group if sufficient
+        if comparisonFunc(len(currentGroup)):
+            filteredGenes.append(currentGroup)
+
+        return filteredGenes
+
+    @staticmethod
+    def genbankToFile(sequence: str, genes: List[Gene], fileName: str):
+        """
+        Writes the list of Genes to file in genbank format
+        :param sequence: DNA sequence
+        :param genes: list of Genes
+        :param fileName: name of the file to write to
+        """
+        # create sequence from sequence string
+        seq = Bio.Seq.Seq(sequence, IUPAC.unambiguous_dna)
+
+        # sort genes from smallest to largest starts
+        genes = GeneUtils.sortGenes(genes)
+
+        # build features
+        features = []
+        for ind, gene in enumerate(genes):
+            direction = 1 if gene.direction == '+' else -1
+            geneFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
+                                                    type='gene',
+                                                    qualifiers={'gene': ind},
+                                                    strand=direction)
+            cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
+                                                   type='CDS',
+                                                   qualifiers={'gene': ind},
+                                                   strand=direction)
+            features.append(geneFeature)
+            features.append(cdsFeature)
+
+        # create genbank file from genes and write to file
+        gbRecord = Bio.SeqRecord.SeqRecord(seq, features=features,
+                                           name=os.path.split(fileName)[1].split('.')[0])
+        SeqIO.write([gbRecord], fileName, 'genbank')
+
+    @staticmethod
+    def findMostGeneOccurrences(genes: List[Gene]) -> Gene:
+        """
+        Takes a list of the same Gene and returns the Gene with the most occurrences.
+        If there are equal occurrences of the Gene, the longest one will be chosen
+        :param genes: list of Genes
+            * Genes should be the same
+                - If positive, same stops
+                - If negative, same starts
+                - Error is thrown if all the Genes are not the same
+        :return: Gene
+        """
+        # dictionary: repr(Gene): [<Gene>, occurrences]
+        geneOccurrences = dict()
+        # calculate frequencies of each gene
+        for gene in genes:
+            geneStr = repr(gene)
+            if geneStr in geneOccurrences:
+                geneOccurrences[geneStr][1] += 1
+            else:
+                geneOccurrences[geneStr] = [gene, 1]
+
+        # sort genes according to frequency
+        # maxGenes = List of [<Gene>, frequency]
+        maxGenes = sorted(geneOccurrences.values(), key=lambda x: x[1], reverse=True)
+
+        maxFrequencyGene = maxGenes[0]
+        if len(maxGenes) > 1:
+            # check if more than one gene share the same max frequency
+            for gene in maxGenes[1:]:
+                # if the gene has the same frequency as the maximum, pick the longest one
+                if gene[1] == maxFrequencyGene[1]:
+                    # see if current gene is longer than the current max
+                    if gene[0].length > maxFrequencyGene[0].length:
+                        maxFrequencyGene = gene
+
+        return maxFrequencyGene[0]
 
 
 class GeneParse:
@@ -830,11 +980,11 @@ def excel_write(output_directory, files, sequence):
 
 
 if __name__ == '__main__':
-    gfile = GeneFile(
-        'D:\mdlaz\Documents\college\Research\programs\GeneQuery\\tests\\fasta_files\Diane complete.fasta',
-        'Paenibacillus_larvae_subsp_ATCC_9545')
-    gfile.genemark_query()
-    with open('genemark.txt', 'w') as file:
-        file.write(gfile.query_data['gm'])
-    genes = GeneParse.parse_genemark(gfile.query_data['gm'])
-    print(genes)
+    file = "D:\\mdlaz\\Documents\\college\\Research\\programs\\GeneQuery\\tests\\fasta_files\\Harrison rearranged.fasta"
+    for seq in SeqIO.parse(file, 'fasta'):
+        Dissequence = seq
+    gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
+    gfile.genemarkhmm_query()
+    data = gfile.query_data['hmm']
+    myGenes = GeneParse.parse_genemarkHmm(data)
+    print(GeneUtils.findMostGeneOccurrences(myGenes[13]))

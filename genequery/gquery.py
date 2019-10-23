@@ -1,5 +1,6 @@
 import os
 import pickle
+from abc import abstractmethod
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -12,6 +13,7 @@ from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from typing import List, Callable
 from genequery import Gene
+import genequery.GuiWidgets
 
 APP_NAME = 'GeneQuery'
 
@@ -708,6 +710,50 @@ class QueryDialog(QDialog):
             QDialog.reject(self)
 
 
+class exportGenbankDialog(genequery.GuiWidgets.exportDialog):
+    def __init__(self, queryData, parent=None):
+        super(exportGenbankDialog, self).__init__(queryData, parent=parent)
+
+        # WINDOW ---------------------------------------------------------------
+        self.setWindowTitle('Export to Genbank')
+
+    def saveFile(self):
+        fileExtensions = ['Genbank (*.gb)',
+                          'All Files (*.*)']
+        saveFileName = QFileDialog.getSaveFileName(self,
+                                                   'Save Genbank File As...',
+                                                   '',
+                                                   ';;'.join(fileExtensions))
+
+        # if the user gave a file
+        if saveFileName[0]:
+            self.saveLineEdit.setText(saveFileName[0])
+
+    def accept(self):
+        """
+        Called when user presses export
+        """
+
+        # put all Genes in one list
+        filteredGenes = []
+        for geneSet in self.queryData.toolData.values():
+            filteredGenes.extend(geneSet)
+
+        # filter based on user selection
+        filteredGenes = Gene.GeneUtils.filterGenes(filteredGenes, self.getFilterFunction())
+        # filtered genes is now List[List[Gene]]
+
+        genesToExport = []
+        # find the most frequent Gene in each set of Genes
+        for geneSet in filteredGenes:
+            genesToExport.append(Gene.GeneUtils.findMostGeneOccurrences(geneSet))
+
+        # output to file
+        Gene.GeneUtils.genbankToFile(str(self.queryData.sequence.seq).lower(), genesToExport, self.saveFileName)
+
+        QDialog.accept(self)
+
+
 class GeneMain(QMainWindow):
     """
     Main Window
@@ -982,94 +1028,14 @@ class GeneMain(QMainWindow):
     @pyqtSlot()
     def exportGenbank(self):
 
-        # open save dialog
-        fileExtensions = ['Genbank (*.gb)',
-                          'All Files (*.*)']
-        genbankFileName = QFileDialog.getSaveFileName(self,
-                                                      'Save Genbank File As...',
-                                                      '',
-                                                      ';;'.join(fileExtensions))
-        # if file was provided
-        if genbankFileName[0] != '':
-            # grab tool count for current genes
-            toolCount = list(self.queryData.tools.values()).count(True)
-
-            allGenes = []
-            # For each gene, find which set of starts/stops is the majority
-            # Majority is used to populate the genbank file
-            for currentSet in self.genes:
-                if len(currentSet) == toolCount:
-                    # check direction of genes
-                    if currentSet[0].direction == '+':
-
-                        # stop is the same for + direction
-                        five_val = currentSet[0].stop
-
-                        # count the number of occurrences for each start
-                        starts = {}
-                        for gene in currentSet:
-                            if gene.start in starts:
-                                starts[gene.start] += 1
-                            else:
-                                starts[gene.start] = 1
-
-                        # find the start with the max number of occurrences
-                        currentMax = list(starts.items())[0]
-                        for key, val in starts.items():
-                            if val > currentMax[1]:
-                                currentMax = (key, val)
-
-                        three_val = currentMax[0]
-
-                    else:
-
-                        # start is the same for - direction
-                        three_val = currentSet[0].start
-
-                        # count number of occurrences for each stop
-                        starts = {}
-                        for gene in currentSet:
-                            if gene.stop in starts:
-                                starts[gene.stop] += 1
-                            else:
-                                starts[gene.stop] = 1
-
-                        # find the stop with the max number of occurrences
-                        currentMax = list(starts.items())[0]
-                        for key, val in starts.items():
-                            if val > currentMax[1]:
-                                currentMax = (key, val)
-
-                        five_val = currentMax[0]
-
-                    allGenes.append((currentSet[0].direction, three_val, five_val))
-
-            # create Genbank file
-            seqString = str(self.queryData.sequence.seq).lower()
-            seq = Bio.Seq.Seq(seqString, IUPAC.unambiguous_dna)
-            features = []
-            for ind, gene in enumerate(allGenes):
-                direction = 1 if gene[0] == '+' else -1
-                geneFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene[1] - 1, gene[2]),
-                                                        type='gene',
-                                                        qualifiers={'gene': ind},
-                                                        strand=direction
-                                                        )
-                cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene[1] - 1, gene[2]),
-                                                       type='CDS',
-                                                       qualifiers={'gene': ind},
-                                                       strand=direction)
-                features.append(geneFeature)
-                features.append(cdsFeature)
-
-            gbRecord = Bio.SeqRecord.SeqRecord(seq, features=features,
-                                               name=os.path.split(genbankFileName[0])[1].split('.')[0])
-            SeqIO.write([gbRecord], genbankFileName[0], 'genbank')
-
+        # create export dialog
+        exportDig = exportGenbankDialog(self.queryData)
+        if exportDig.exec_():
             # display save status
-            self.status.showMessage('Exported Genbank file to: {}'.format(genbankFileName[0]), 5000)
+            self.status.showMessage('Exported Genbank file to: {}'.format(exportDig.saveFileName), 5000)
 
     # WINDOW METHODS -------------------------------------------------------------------------------
+
     def closeEvent(self, event):
         if self.okToContinue():
             # exit
@@ -1129,7 +1095,7 @@ class GeneMain(QMainWindow):
         if len(genes) == 0:
             return
 
-        genes = sortGenes(genes)
+        genes = Gene.GeneUtils.sortGenes(genes)
 
         # reset genes
         self.genes = []
@@ -1218,8 +1184,6 @@ class GeneMain(QMainWindow):
                     oneItem = QTableWidgetItem(str('X'))
                     oneItem.setTextAlignment(Qt.AlignCenter)
                     self.geneTable.setItem(currentRow, ONE_COLUMN, oneItem)
-
-                print('{} - {}'.format(currentRow + 1, currentGenes))
 
                 # color row
                 colorSetting = self.settings.value(ColorTable.CELL_COLOR_SETTING + str(currentGeneCount - 1))
@@ -1314,16 +1278,6 @@ class GeneMain(QMainWindow):
             item.setBackground(color)
             item.setForeground(textColor)
 
-    def __sort_genes(self, gene):
-        """
-        Used to sort equivalent genes
-        :param gene: Gene
-        """
-        if gene.direction == '+':
-            return gene.stop
-        else:
-            return gene.start
-
     def enableActions(self):
         """
         Enables / Disables GUI actions
@@ -1381,70 +1335,6 @@ class GeneMain(QMainWindow):
         NewFileDialog.checkDefaultSettings(self.settings)
         # COLOR SETTINGS
         ColorTable.checkDefaultSettings(self.settings)
-
-
-# HELPER FUNCTIONS
-def getGeneComparison(gene: Gene.Gene) -> int:
-    """
-    Helper function to retrieve the stop/start of a gene depending on its direction
-    :param gene: Gene
-    :return: the start/stop of a Gene
-    """
-    if gene.direction == '+':
-        return gene.stop
-    else:
-        return gene.start
-
-
-def sortGenes(genes: List[Gene.Gene]) -> List[Gene.Gene]:
-    """
-    Sort Genes according to their start/stop depending on the direction of the gene
-    * Forward direction genes are sorted by their stop
-    * Negative direction genes are sorted by their start
-    :param genes: List of Genes to sort
-    :return: List[Gene] sorted by start/stop depending on direction of gene
-    """
-    return sorted(genes, key=getGeneComparison)
-
-
-def filterGenes(genes: List[Gene.Gene], comparisonFunc: Callable[[int], bool]) -> List[List[Gene.Gene]]:
-    """
-    Filters the genes to only those where there are <limit> or more of that gene
-    Ex: Filter for genes which there are more than 3 of each
-        greaterThanThreeGenes = filterGenes(genes, lambda x: x > 3)
-
-    :param genes: List[Gene]
-    :param comparisonFunc: a function which takes a quantity and returns a bool based on that value
-        * Arg 1: Quantity (int)
-        * Result: bool
-        * Ex: lambda x: x <= 10
-    :return: List[List[Gene]] in order of stop/starts
-    """
-    filteredGenes = []
-    sortedGenes = sortGenes(genes)
-
-    # group the genes according to their stops/starts
-    # discard groups with less than <limit> items
-    currentGroup = [sortedGenes[0]]
-    previousGene = sortedGenes[0]
-    for gene in sortedGenes[1:]:
-        # if the current gene is the same as the previous, add to the same group
-        if gene == previousGene:
-            currentGroup.append(gene)
-
-        # different genes, create a new group
-        else:
-            # if comparison is satisfactory, add to genes to be returned
-            # else, they're dropped
-            if comparisonFunc(len(currentGroup)):
-                filteredGenes.append(currentGroup)
-
-            # new group of genes
-            currentGroup = [gene]
-
-        previousGene = gene
-
-    return filteredGenes
 
 
 # MAIN FUNCTION
