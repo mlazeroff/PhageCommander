@@ -752,7 +752,20 @@ class exportGenbankDialog(genequery.GuiWidgets.exportDialog):
             genesToExport.append(Gene.GeneUtils.findMostGeneOccurrences(geneSet))
 
         # output to file
-        Gene.GeneUtils.genbankToFile(str(self.queryData.sequence.seq).lower(), genesToExport, self.saveFileName)
+        try:
+            Gene.GeneUtils.genbankToFile(str(self.queryData.sequence.seq).lower(), genesToExport, self.saveFileName)
+        except PermissionError as e:
+            QMessageBox.warning(self,
+                                'Permission Denied',
+                                'Could not write to: \"{}\". Permission denied.'.format(self.saveFileName))
+            # go back to dialogue
+            return
+        except Exception as e:
+            QMessageBox.warning(self,
+                                'Could Not Write to File',
+                                'Could not write to: \"{}\".\n{}'.format(self.saveFileName, str(e)))
+            # go back to dialogue
+            return
 
         # save file location setting
         saveFileDir = os.path.split(self.saveFileName)[0]

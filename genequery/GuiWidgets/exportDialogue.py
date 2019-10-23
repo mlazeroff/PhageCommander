@@ -272,3 +272,4 @@ if __name__ == '__main__':
     dig = exportDialog(QueryData(), QSettings())
     dig.show()
     app.exec_()
+    print(dig.saveFileName)
