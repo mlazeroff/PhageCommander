@@ -22,10 +22,11 @@ class exportDialog(QDialog):
     _ALL_BUTTON_TEXT = 'ALL'
     _ONE_BUTTON_TEXT = 'ONE'
 
-    def __init__(self, queryData, parent=None):
+    def __init__(self, queryData, settings, parent=None):
         super(exportDialog, self).__init__(parent)
 
         self.queryData = queryData
+        self.settings = settings
 
         # VARIABLES -----------------------------------------------------------------
         # currently selected radiobutton - defaults to ALL
