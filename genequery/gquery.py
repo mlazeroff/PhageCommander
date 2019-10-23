@@ -1007,10 +1007,8 @@ class GeneMain(QMainWindow):
         # create export dialog
         exportDig = exportGenbankDialog(self.queryData)
         if exportDig.exec_():
-            pass
-
-            # # display save status
-            # self.status.showMessage('Exported Genbank file to: {}'.format(genbankFileName[0]), 5000)
+            # display save status
+            self.status.showMessage('Exported Genbank file to: {}'.format(genbankFileName[0]), 5000)
 
     # WINDOW METHODS -------------------------------------------------------------------------------
 

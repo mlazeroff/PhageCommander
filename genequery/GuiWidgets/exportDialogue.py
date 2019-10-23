@@ -31,6 +31,7 @@ class exportDialog(QDialog):
         # currently selected radiobutton - defaults to ALL
         self.currentSelection = self._LESS_THAN_EQUAL_BUTTON_TEXT
         self.toolCount = list(self.queryData.tools.values()).count(True)
+        self.saveFileName = ''
 
         # WIDGETS ------------------------------------------------------------------
         mainLayout = QVBoxLayout()
@@ -249,6 +250,7 @@ class exportDialog(QDialog):
 
         # save file is valid
         else:
+            self.saveFileName = self.saveLineEdit.text()
             return True
 
 
