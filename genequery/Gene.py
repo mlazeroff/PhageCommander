@@ -11,6 +11,11 @@ from typing import Callable, List
 from subprocess import Popen, PIPE
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, colors
+import Bio.Seq
+import Bio.SeqFeature
+import Bio.SeqRecord
+from Bio import SeqIO
+from Bio.Alphabet import IUPAC
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.gatech.edu/GeneMark/'
@@ -37,19 +42,18 @@ class Error(Exception):
     pass
 
 
-class GeneFileError(Error):
-    """
-    Raised when no result from GeneMark is returned
-    """
-
-    def __init__(self, message):
-        self.message = message
-
-
 class GeneFile:
     """
     Class for querying GeneMark tools for a DNA sequence
     """
+
+    class GeneFileError(Error):
+        """
+        Raised when no result from GeneMark is returned
+        """
+
+        def __init__(self, message):
+            self.message = message
 
     def __init__(self, sequence_file, species):
         """
@@ -75,7 +79,7 @@ class GeneFile:
 
         # Gene species - Check if compatible type, if not, exit
         if species not in SPECIES:
-            raise GeneFileError(
+            raise GeneFile.GeneFileError(
                 "{} is not a compatible species type - See species.txt".format(species))
         self.species = species
 
@@ -101,8 +105,8 @@ class GeneFile:
         # check for job_key in response, if not raise error
         try:
             if 'job_key' not in file_post.text:
-                raise GeneFileError("Glimmer POST #1: Invalid response")
-        except GeneFileError:
+                raise GeneFile.GeneFileError("Glimmer POST #1: Invalid response")
+        except GeneFile.GeneFileError:
             raise
 
         # get job_key from response
@@ -120,7 +124,7 @@ class GeneFile:
                 return_post = requests.post(GLIMMER_DOMAIN, data=payload, headers=headers)
                 return_post.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            raise GeneFileError(
+            raise GeneFile.GeneFileError(
                 'Glimmer Server Error: Check for DNA for proper format or check server status')
 
         self.query_data['glimmer'] = return_post.content.decode('utf-8')
@@ -143,8 +147,8 @@ class GeneFile:
         # check for job_key in response, if not raise error
         try:
             if 'job_key' not in file_post.text:
-                raise GeneFileError("GeneMark - Invalid Response from server")
-        except GeneFileError:
+                raise GeneFile.GeneFileError("GeneMark - Invalid Response from server")
+        except GeneFile.GeneFileError:
             raise
 
         # get job_key from response
@@ -164,7 +168,7 @@ class GeneFile:
                 return_post.raise_for_status()
         except requests.exceptions.HTTPError as e:
             print(e)
-            raise GeneFileError(
+            raise GeneFile.GeneFileError(
                 'GeneMark Server Error: Check for DNA for proper format or check server status')
 
         self.query_data['gm'] = return_post.content.decode('utf-8')
@@ -195,8 +199,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneFileError("GeneMark Hmm")
-        except GeneFileError:
+                raise GeneFile.GeneFileError("GeneMark Hmm")
+        except GeneFile.GeneFileError:
             raise
 
         getHmmFile = requests.get(FILE_DOMAIN + file_location)
@@ -227,8 +231,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneFileError("GeneMarkS")
-        except GeneFileError:
+                raise GeneFile.GeneFileError("GeneMarkS")
+        except GeneFile.GeneFileError:
             raise
 
         getGmsFile = requests.get(FILE_DOMAIN + file_location)
@@ -263,8 +267,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneFileError("GeneMark Heuristic")
-        except GeneFileError:
+                raise GeneFile.GeneFileError("GeneMark Heuristic")
+        except GeneFile.GeneFileError:
             raise
 
         getHeuristicFile = requests.get(FILE_DOMAIN + file_location)
@@ -295,8 +299,8 @@ class GeneFile:
         # if tmp not available, change in response format or invalid post
         try:
             if file_location == '':
-                raise GeneFileError("GeneMarkS2")
-        except GeneFileError:
+                raise GeneFile.GeneFileError("GeneMarkS2")
+        except GeneFile.GeneFileError:
             raise
 
         getGMS2File = requests.get(FILE_DOMAIN + file_location)
@@ -319,7 +323,7 @@ class GeneFile:
         # check for error, exit if so
         if proc.returncode != 0:
             print(stderr)
-            raise GeneFileError("Prodigal")
+            raise GeneFile.GeneFileError("Prodigal")
 
         self.query_data['prodigal'] = stdout.decode('utf-8')
 
@@ -460,6 +464,39 @@ class GeneUtils:
             previousGene = gene
 
         return filteredGenes
+
+    @staticmethod
+    def genbankToFile(sequence: str, genes: List[Gene], fileName: str):
+        """
+        Writes the list of Genes to file in genbank format
+        :param sequence: DNA sequence
+        :param genes: list of Genes
+        :param fileName: name of the file to write to
+        """
+        # create sequence from sequence string
+        seq = Bio.Seq.Seq(sequence, IUPAC.unambiguous_dna)
+
+        # sort genes from smallest to largest starts
+        genes = GeneUtils.sortGenes(genes)
+
+        # build features
+        features = []
+        for ind, gene in enumerate(genes):
+            direction = 1 if gene.direction == '+' else -1
+            geneFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
+                                                    type='gene',
+                                                    qualifiers={'gene': ind},
+                                                    strand=direction)
+            cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
+                                                   type='CDS',
+                                                   qualifiers={'gene', ind},
+                                                   strand=direction)
+            features.append(geneFeature)
+            features.append(cdsFeature)
+
+        # create genbank file from genes and write to file
+        gbRecord = Bio.SeqRecord.SeqRecord(seq, features=features, name=fileName)
+        SeqIO.write([gbRecord], fileName, 'genbank')
 
 
 class GeneParse:
