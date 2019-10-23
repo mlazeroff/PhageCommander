@@ -48,8 +48,6 @@ class exportDialog(QDialog):
         self.filterSpinBox.setMaximum(self.toolCount)
         self.filterSpinBox.setMinimum(1)
         self.filterSpinBox.setValue(self.filterSpinBox.maximum())
-        # default button is ALL, so disable spinbox
-        self.filterSpinBox.setDisabled(True)
 
         callsLabel = QLabel('Calls')
 

@@ -463,6 +463,10 @@ class GeneUtils:
 
             previousGene = gene
 
+        # add last group if sufficient
+        if comparisonFunc(len(currentGroup)):
+            filteredGenes.append(currentGroup)
+
         return filteredGenes
 
     @staticmethod

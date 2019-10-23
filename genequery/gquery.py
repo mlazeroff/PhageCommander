@@ -729,6 +729,30 @@ class exportGenbankDialog(genequery.GuiWidgets.exportDialog):
         if saveFileName[0]:
             self.saveLineEdit.setText(saveFileName[0])
 
+    def accept(self):
+        """
+        Called when user presses export
+        """
+
+        # put all Genes in one list
+        filteredGenes = []
+        for geneSet in self.queryData.toolData.values():
+            filteredGenes.extend(geneSet)
+
+        # filter based on user selection
+        filteredGenes = Gene.GeneUtils.filterGenes(filteredGenes, self.getFilterFunction())
+        # filtered genes is now List[List[Gene]]
+
+        genesToExport = []
+        # find the most frequent Gene in each set of Genes
+        for geneSet in filteredGenes:
+            genesToExport.append(Gene.GeneUtils.findMostGeneOccurrences(geneSet))
+
+        # output to file
+        Gene.GeneUtils.genbankToFile(str(self.queryData.sequence.seq).lower(), genesToExport, self.saveFileName)
+
+        QDialog.accept(self)
+
 
 class GeneMain(QMainWindow):
     """
@@ -1008,7 +1032,7 @@ class GeneMain(QMainWindow):
         exportDig = exportGenbankDialog(self.queryData)
         if exportDig.exec_():
             # display save status
-            self.status.showMessage('Exported Genbank file to: {}'.format(genbankFileName[0]), 5000)
+            self.status.showMessage('Exported Genbank file to: {}'.format(exportDig.saveFileName), 5000)
 
     # WINDOW METHODS -------------------------------------------------------------------------------
 
