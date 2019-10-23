@@ -3,6 +3,7 @@ from abc import abstractmethod
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+import genequery.gquery as gq
 
 
 class exportDialog(QDialog):
@@ -27,6 +28,11 @@ class exportDialog(QDialog):
 
         self.queryData = queryData
 
+        # VARIABLES -----------------------------------------------------------------
+        # currently selected radiobutton - defaults to ALL
+        self.currentSelection = self._LESS_THAN_EQUAL_BUTTON_TEXT
+        self.toolCount = list(self.queryData.tools.values()).count(True)
+
         # WIDGETS ------------------------------------------------------------------
         mainLayout = QVBoxLayout()
         spinBoxLayout = QHBoxLayout()
@@ -39,28 +45,30 @@ class exportDialog(QDialog):
         self.filterSpinBox = QSpinBox()
         self.filterSpinBox.setMaximumWidth(50)
         # set max possible value to total amount of tools
-        self.filterSpinBox.setMaximum(list(toolVal for toolVal in queryData.tools.values()).count(True))
+        self.filterSpinBox.setMaximum(self.toolCount)
         self.filterSpinBox.setMinimum(1)
         self.filterSpinBox.setValue(self.filterSpinBox.maximum())
+        # default button is ALL, so disable spinbox
+        self.filterSpinBox.setDisabled(True)
 
         callsLabel = QLabel('Calls')
 
         self.radioButtons = []
         exactlyRadioButton = QRadioButton(self._EXACTLY_BUTTON_TEXT)
-        exactlyRadioButton.clicked.connect(lambda: self.setSpinBoxRange(exactlyRadioButton))
+        exactlyRadioButton.clicked.connect(lambda: self.buttonClicked(exactlyRadioButton))
         self.radioButtons.append(exactlyRadioButton)
         greaterThanRadioButton = QRadioButton(self._GREATER_THAN_BUTTON_TEXT)
-        greaterThanRadioButton.clicked.connect(lambda: self.setSpinBoxRange(greaterThanRadioButton))
+        greaterThanRadioButton.clicked.connect(lambda: self.buttonClicked(greaterThanRadioButton))
         self.radioButtons.append(greaterThanRadioButton)
         lessThanEqualRadioButton = QRadioButton(self._LESS_THAN_EQUAL_BUTTON_TEXT)
-        lessThanEqualRadioButton.clicked.connect(lambda: self.setSpinBoxRange(lessThanEqualRadioButton))
+        lessThanEqualRadioButton.clicked.connect(lambda: self.buttonClicked(lessThanEqualRadioButton))
         lessThanEqualRadioButton.setChecked(True)
         self.radioButtons.append(lessThanEqualRadioButton)
         allRadioButton = QRadioButton(self._ALL_BUTTON_TEXT)
-        allRadioButton.clicked.connect(lambda: self.setSpinBoxRange(allRadioButton))
+        allRadioButton.clicked.connect(lambda: self.buttonClicked(allRadioButton))
         self.radioButtons.append(allRadioButton)
         oneRadioButton = QRadioButton(self._ONE_BUTTON_TEXT)
-        oneRadioButton.clicked.connect(lambda: self.setSpinBoxRange(oneRadioButton))
+        oneRadioButton.clicked.connect(lambda: self.buttonClicked(oneRadioButton))
         self.radioButtons.append(oneRadioButton)
 
         exportButton = QPushButton('Export')
@@ -140,6 +148,18 @@ class exportDialog(QDialog):
         """
         pass
 
+    def buttonClicked(self, radioButton: QRadioButton):
+        """
+        Called when a radio button is toggled
+        :param radioButton: QRadioButton which was toggled
+        """
+
+        # set the range of the spinbox
+        self.setSpinBoxRange(radioButton)
+
+        # set the currentSelection
+        self.currentSelection = radioButton.text()
+
     def setSpinBoxRange(self, radioButton: QRadioButton):
         """
         Dynamically sets the range of spinboxes based upon the selected filter type
@@ -152,25 +172,52 @@ class exportDialog(QDialog):
 
         # set range from 1-max
         if buttonText == self._EXACTLY_BUTTON_TEXT or buttonText == self._LESS_THAN_EQUAL_BUTTON_TEXT:
-            maxVal = list(toolVal for toolVal in self.queryData.tools.values()).count(True)
+            maxVal = self.toolCount
             self.filterSpinBox.setMaximum(maxVal)
             self.filterSpinBox.setMinimum(1)
 
         # set range from 0, max - 1
         elif buttonText == self._GREATER_THAN_BUTTON_TEXT:
-            maxVal = list(toolVal for toolVal in self.queryData.tools.values()).count(True) - 1
+            maxVal = self.toolCount - 1
             self.filterSpinBox.setMaximum(maxVal)
             self.filterSpinBox.setMinimum(0)
 
         elif buttonText == self._ALL_BUTTON_TEXT:
             # set box to max and disable
-            self.filterSpinBox.setValue(list(toolVal for toolVal in self.queryData.tools.values()).count(True))
+            self.filterSpinBox.setValue(self.toolCount)
             self.filterSpinBox.setDisabled(True)
 
         elif buttonText == self._ONE_BUTTON_TEXT:
             # set box to one and disable
             self.filterSpinBox.setValue(1)
             self.filterSpinBox.setDisabled(True)
+
+    def getSelection(self):
+        """
+        :return: The currently selected button and filter amount in a tuple
+                (<selected_button_text>, <filter_amount>)
+        """
+        return self.currentSelection, self.filterSpinBox.value()
+
+    def getFilterFunction(self):
+        """
+        :return: A filter function based upon the current dialog selection
+            * Filter function is of the following form:
+                lambda x: x <= <filter_amount>
+                lambda x: x == <filter_amount>
+                lambda x: x > <filter_amount>
+        """
+        filterAmount = self.filterSpinBox.value()
+
+        filterFunctions = {
+            self._ALL_BUTTON_TEXT: lambda x: x == filterAmount,
+            self._LESS_THAN_EQUAL_BUTTON_TEXT: lambda x: x <= filterAmount,
+            self._GREATER_THAN_BUTTON_TEXT: lambda x: x > filterAmount,
+            self._EXACTLY_BUTTON_TEXT: lambda x: x == filterAmount,
+            self._ONE_BUTTON_TEXT: lambda x: x == filterAmount
+        }
+
+        return filterFunctions[self.currentSelection]
 
     def saveLineEdited(self):
         """
@@ -204,3 +251,10 @@ class exportDialog(QDialog):
         # save file is valid
         else:
             return True
+
+
+if __name__ == '__main__':
+    app = QApplication([])
+    dig = exportDialog(gq.QueryData())
+    dig.show()
+    app.exec_()

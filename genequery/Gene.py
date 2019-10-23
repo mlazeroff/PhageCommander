@@ -940,9 +940,9 @@ def excel_write(output_directory, files, sequence):
 if __name__ == '__main__':
     file = "D:\\mdlaz\\Documents\\college\\Research\\programs\\GeneQuery\\tests\\fasta_files\\Diane complete.fasta"
     for seq in SeqIO.parse(file, 'fasta'):
-        sequence = seq
+        Dissequence = seq
     gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
     gfile.genemarkhmm_query()
     data = gfile.query_data['hmm']
     myGenes = GeneParse.parse_genemarkHmm(data)
-    GeneUtils.genbankToFile(str(sequence.seq).lower(), myGenes, 'genbank.gb')
+    GeneUtils.genbankToFile(str(Dissequence.seq).lower(), myGenes, 'genbank.gb')
