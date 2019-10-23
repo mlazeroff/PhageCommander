@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import os
+from typing import Callable, List
 from subprocess import Popen, PIPE
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, colors
@@ -390,6 +391,75 @@ class Gene:
 
     def __repr__(self):
         return '({}, {}, {})'.format(self.direction, self.start, self.stop)
+
+
+class GeneUtils:
+    """
+    Class for operations relating to Genes
+    """
+
+    @staticmethod
+    def getGeneComparison(gene: Gene) -> int:
+        """
+        Helper function to retrieve the stop/start of a gene depending on its direction
+        :param gene: Gene
+        :return: the start/stop of a Gene
+        """
+        if gene.direction == '+':
+            return gene.stop
+        else:
+            return gene.start
+
+    @staticmethod
+    def sortGenes(genes: List[Gene]) -> List[Gene]:
+        """
+        Sort Genes according to their start/stop depending on the direction of the gene
+        * Forward direction genes are sorted by their stop
+        * Negative direction genes are sorted by their start
+        :param genes: List of Genes to sort
+        :return: List[Gene] sorted by start/stop depending on direction of gene
+        """
+        return sorted(genes, key=GeneUtils.getGeneComparison)
+
+    @staticmethod
+    def filterGenes(genes: List[Gene], comparisonFunc: Callable[[int], bool]) -> List[List[Gene]]:
+        """
+        Filters the genes to only those where there are <limit> or more of that gene
+        Ex: Filter for genes which there are more than 3 of each
+            greaterThanThreeGenes = filterGenes(genes, lambda x: x > 3)
+
+        :param genes: List[Gene]
+        :param comparisonFunc: a function which takes a quantity and returns a bool based on that value
+            * Arg 1: Quantity (int)
+            * Result: bool
+            * Ex: lambda x: x <= 10
+        :return: List[List[Gene]] in order of stop/starts
+        """
+        filteredGenes = []
+        sortedGenes = GeneUtils.sortGenes(genes)
+
+        # group the genes according to their stops/starts
+        # discard groups with less than <limit> items
+        currentGroup = [sortedGenes[0]]
+        previousGene = sortedGenes[0]
+        for gene in sortedGenes[1:]:
+            # if the current gene is the same as the previous, add to the same group
+            if gene == previousGene:
+                currentGroup.append(gene)
+
+            # different genes, create a new group
+            else:
+                # if comparison is satisfactory, add to genes to be returned
+                # else, they're dropped
+                if comparisonFunc(len(currentGroup)):
+                    filteredGenes.append(currentGroup)
+
+                # new group of genes
+                currentGroup = [gene]
+
+            previousGene = gene
+
+        return filteredGenes
 
 
 class GeneParse:
@@ -830,11 +900,4 @@ def excel_write(output_directory, files, sequence):
 
 
 if __name__ == '__main__':
-    gfile = GeneFile(
-        'D:\mdlaz\Documents\college\Research\programs\GeneQuery\\tests\\fasta_files\Diane complete.fasta',
-        'Paenibacillus_larvae_subsp_ATCC_9545')
-    gfile.genemark_query()
-    with open('genemark.txt', 'w') as file:
-        file.write(gfile.query_data['gm'])
-    genes = GeneParse.parse_genemark(gfile.query_data['gm'])
-    print(genes)
+    pass

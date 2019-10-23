@@ -1151,7 +1151,7 @@ class GeneMain(QMainWindow):
         if len(genes) == 0:
             return
 
-        genes = sortGenes(genes)
+        genes = Gene.GeneUtils.sortGenes(genes)
 
         # reset genes
         self.genes = []
@@ -1334,16 +1334,6 @@ class GeneMain(QMainWindow):
             item.setBackground(color)
             item.setForeground(textColor)
 
-    def __sort_genes(self, gene):
-        """
-        Used to sort equivalent genes
-        :param gene: Gene
-        """
-        if gene.direction == '+':
-            return gene.stop
-        else:
-            return gene.start
-
     def enableActions(self):
         """
         Enables / Disables GUI actions
@@ -1401,70 +1391,6 @@ class GeneMain(QMainWindow):
         NewFileDialog.checkDefaultSettings(self.settings)
         # COLOR SETTINGS
         ColorTable.checkDefaultSettings(self.settings)
-
-
-# HELPER FUNCTIONS
-def getGeneComparison(gene: Gene.Gene) -> int:
-    """
-    Helper function to retrieve the stop/start of a gene depending on its direction
-    :param gene: Gene
-    :return: the start/stop of a Gene
-    """
-    if gene.direction == '+':
-        return gene.stop
-    else:
-        return gene.start
-
-
-def sortGenes(genes: List[Gene.Gene]) -> List[Gene.Gene]:
-    """
-    Sort Genes according to their start/stop depending on the direction of the gene
-    * Forward direction genes are sorted by their stop
-    * Negative direction genes are sorted by their start
-    :param genes: List of Genes to sort
-    :return: List[Gene] sorted by start/stop depending on direction of gene
-    """
-    return sorted(genes, key=getGeneComparison)
-
-
-def filterGenes(genes: List[Gene.Gene], comparisonFunc: Callable[[int], bool]) -> List[List[Gene.Gene]]:
-    """
-    Filters the genes to only those where there are <limit> or more of that gene
-    Ex: Filter for genes which there are more than 3 of each
-        greaterThanThreeGenes = filterGenes(genes, lambda x: x > 3)
-
-    :param genes: List[Gene]
-    :param comparisonFunc: a function which takes a quantity and returns a bool based on that value
-        * Arg 1: Quantity (int)
-        * Result: bool
-        * Ex: lambda x: x <= 10
-    :return: List[List[Gene]] in order of stop/starts
-    """
-    filteredGenes = []
-    sortedGenes = sortGenes(genes)
-
-    # group the genes according to their stops/starts
-    # discard groups with less than <limit> items
-    currentGroup = [sortedGenes[0]]
-    previousGene = sortedGenes[0]
-    for gene in sortedGenes[1:]:
-        # if the current gene is the same as the previous, add to the same group
-        if gene == previousGene:
-            currentGroup.append(gene)
-
-        # different genes, create a new group
-        else:
-            # if comparison is satisfactory, add to genes to be returned
-            # else, they're dropped
-            if comparisonFunc(len(currentGroup)):
-                filteredGenes.append(currentGroup)
-
-            # new group of genes
-            currentGroup = [gene]
-
-        previousGene = gene
-
-    return filteredGenes
 
 
 # MAIN FUNCTION
