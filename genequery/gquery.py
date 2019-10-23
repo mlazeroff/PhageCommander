@@ -711,8 +711,10 @@ class QueryDialog(QDialog):
 
 
 class exportGenbankDialog(genequery.GuiWidgets.exportDialog):
-    def __init__(self, queryData, parent=None):
-        super(exportGenbankDialog, self).__init__(queryData, parent=parent)
+    _LAST_GENBANK_LOCATION_SETTING = 'EXPORT_GENBANK_DIALOG/last_genbank_location'
+
+    def __init__(self, queryData, settings, parent=None):
+        super(exportGenbankDialog, self).__init__(queryData, settings, parent=parent)
 
         # WINDOW ---------------------------------------------------------------
         self.setWindowTitle('Export to Genbank')
@@ -720,9 +722,10 @@ class exportGenbankDialog(genequery.GuiWidgets.exportDialog):
     def saveFile(self):
         fileExtensions = ['Genbank (*.gb)',
                           'All Files (*.*)']
+        saveFileLocation = self.settings.value(exportGenbankDialog._LAST_GENBANK_LOCATION_SETTING)
         saveFileName = QFileDialog.getSaveFileName(self,
                                                    'Save Genbank File As...',
-                                                   '',
+                                                   saveFileLocation,
                                                    ';;'.join(fileExtensions))
 
         # if the user gave a file
@@ -751,7 +754,30 @@ class exportGenbankDialog(genequery.GuiWidgets.exportDialog):
         # output to file
         Gene.GeneUtils.genbankToFile(str(self.queryData.sequence.seq).lower(), genesToExport, self.saveFileName)
 
+        # save file location setting
+        saveFileDir = os.path.split(self.saveFileName)[0]
+        self.settings.setValue(exportGenbankDialog._LAST_GENBANK_LOCATION_SETTING, saveFileDir)
+
         QDialog.accept(self)
+
+    @staticmethod
+    def checkDefaultSettings(settings):
+        """
+        Checks if required settings exist - if not, populates them
+        :param settings: QSettings obj
+        """
+        # Last save location
+        if settings.value(exportGenbankDialog._LAST_GENBANK_LOCATION_SETTING) is None:
+            exportGenbankDialog._setDefaultSettings(settings)
+
+    @staticmethod
+    def _setDefaultSettings(settings):
+        """
+        Populates the default values for the required settings
+        :param settings: QSettings obj
+        """
+        # Last save location
+        settings.setValue(exportGenbankDialog._LAST_GENBANK_LOCATION_SETTING, '')
 
 
 class GeneMain(QMainWindow):
@@ -1029,7 +1055,7 @@ class GeneMain(QMainWindow):
     def exportGenbank(self):
 
         # create export dialog
-        exportDig = exportGenbankDialog(self.queryData)
+        exportDig = exportGenbankDialog(self.queryData, self.settings)
         if exportDig.exec_():
             # display save status
             self.status.showMessage('Exported Genbank file to: {}'.format(exportDig.saveFileName), 5000)
@@ -1333,6 +1359,8 @@ class GeneMain(QMainWindow):
         """
         # NewFileDialog SETTINGS
         NewFileDialog.checkDefaultSettings(self.settings)
+        # EXPORT GENBANK SETTINGS
+        exportGenbankDialog.checkDefaultSettings(self.settings)
         # COLOR SETTINGS
         ColorTable.checkDefaultSettings(self.settings)
 
