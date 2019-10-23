@@ -1004,94 +1004,16 @@ class GeneMain(QMainWindow):
     @pyqtSlot()
     def exportGenbank(self):
 
-        # open save dialog
-        fileExtensions = ['Genbank (*.gb)',
-                          'All Files (*.*)']
-        genbankFileName = QFileDialog.getSaveFileName(self,
-                                                      'Save Genbank File As...',
-                                                      '',
-                                                      ';;'.join(fileExtensions))
-        # if file was provided
-        if genbankFileName[0] != '':
-            # grab tool count for current genes
-            toolCount = list(self.queryData.tools.values()).count(True)
+        # create export dialog
+        exportDig = exportGenbankDialog(self.queryData)
+        if exportDig.exec_():
+            pass
 
-            allGenes = []
-            # For each gene, find which set of starts/stops is the majority
-            # Majority is used to populate the genbank file
-            for currentSet in self.genes:
-                if len(currentSet) == toolCount:
-                    # check direction of genes
-                    if currentSet[0].direction == '+':
-
-                        # stop is the same for + direction
-                        five_val = currentSet[0].stop
-
-                        # count the number of occurrences for each start
-                        starts = {}
-                        for gene in currentSet:
-                            if gene.start in starts:
-                                starts[gene.start] += 1
-                            else:
-                                starts[gene.start] = 1
-
-                        # find the start with the max number of occurrences
-                        currentMax = list(starts.items())[0]
-                        for key, val in starts.items():
-                            if val > currentMax[1]:
-                                currentMax = (key, val)
-
-                        three_val = currentMax[0]
-
-                    else:
-
-                        # start is the same for - direction
-                        three_val = currentSet[0].start
-
-                        # count number of occurrences for each stop
-                        starts = {}
-                        for gene in currentSet:
-                            if gene.stop in starts:
-                                starts[gene.stop] += 1
-                            else:
-                                starts[gene.stop] = 1
-
-                        # find the stop with the max number of occurrences
-                        currentMax = list(starts.items())[0]
-                        for key, val in starts.items():
-                            if val > currentMax[1]:
-                                currentMax = (key, val)
-
-                        five_val = currentMax[0]
-
-                    allGenes.append((currentSet[0].direction, three_val, five_val))
-
-            # create Genbank file
-            seqString = str(self.queryData.sequence.seq).lower()
-            seq = Bio.Seq.Seq(seqString, IUPAC.unambiguous_dna)
-            features = []
-            for ind, gene in enumerate(allGenes):
-                direction = 1 if gene[0] == '+' else -1
-                geneFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene[1] - 1, gene[2]),
-                                                        type='gene',
-                                                        qualifiers={'gene': ind},
-                                                        strand=direction
-                                                        )
-                cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene[1] - 1, gene[2]),
-                                                       type='CDS',
-                                                       qualifiers={'gene': ind},
-                                                       strand=direction)
-                features.append(geneFeature)
-                features.append(cdsFeature)
-
-            gbRecord = Bio.SeqRecord.SeqRecord(seq, features=features,
-                                               name=os.path.split(genbankFileName[0])[1].split('.')[0])
-            SeqIO.write([gbRecord], genbankFileName[0], 'genbank')
-
-            # display save status
-            self.status.showMessage('Exported Genbank file to: {}'.format(genbankFileName[0]), 5000)
+            # # display save status
+            # self.status.showMessage('Exported Genbank file to: {}'.format(genbankFileName[0]), 5000)
 
     # WINDOW METHODS -------------------------------------------------------------------------------
+
     def closeEvent(self, event):
         if self.okToContinue():
             # exit

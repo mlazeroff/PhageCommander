@@ -499,6 +499,44 @@ class GeneUtils:
                                            name=os.path.split(fileName)[1].split('.')[0])
         SeqIO.write([gbRecord], fileName, 'genbank')
 
+    @staticmethod
+    def findMostGeneOccurrences(genes: List[Gene]) -> Gene:
+        """
+        Takes a list of the same Gene and returns the Gene with the most occurrences.
+        If there are equal occurrences of the Gene, the longest one will be chosen
+        :param genes: list of Genes
+            * Genes should be the same
+                - If positive, same stops
+                - If negative, same starts
+                - Error is thrown if all the Genes are not the same
+        :return: Gene
+        """
+        # dictionary: repr(Gene): [<Gene>, occurrences]
+        geneOccurrences = dict()
+        # calculate frequencies of each gene
+        for gene in genes:
+            geneStr = repr(gene)
+            if geneStr in geneOccurrences:
+                geneOccurrences[geneStr][1] += 1
+            else:
+                geneOccurrences[geneStr] = [gene, 1]
+
+        # sort genes according to frequency
+        # maxGenes = List of [<Gene>, frequency]
+        maxGenes = sorted(geneOccurrences.values(), key=lambda x: x[1], reverse=True)
+
+        maxFrequencyGene = maxGenes[0]
+        if len(maxGenes) > 1:
+            # check if more than one gene share the same max frequency
+            for gene in maxGenes[1:]:
+                # if the gene has the same frequency as the maximum, pick the longest one
+                if gene[1] == maxFrequencyGene[1]:
+                    # see if current gene is longer than the current max
+                    if gene[0].length > maxFrequencyGene[0].length:
+                        maxFrequencyGene = gene
+
+        return maxFrequencyGene[0]
+
 
 class GeneParse:
     """
@@ -938,11 +976,11 @@ def excel_write(output_directory, files, sequence):
 
 
 if __name__ == '__main__':
-    file = "D:\\mdlaz\\Documents\\college\\Research\\programs\\GeneQuery\\tests\\fasta_files\\Diane complete.fasta"
+    file = "D:\\mdlaz\\Documents\\college\\Research\\programs\\GeneQuery\\tests\\fasta_files\\Harrison rearranged.fasta"
     for seq in SeqIO.parse(file, 'fasta'):
         Dissequence = seq
     gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
     gfile.genemarkhmm_query()
     data = gfile.query_data['hmm']
     myGenes = GeneParse.parse_genemarkHmm(data)
-    GeneUtils.genbankToFile(str(Dissequence.seq).lower(), myGenes, 'genbank.gb')
+    print(GeneUtils.findMostGeneOccurrences(myGenes[13]))

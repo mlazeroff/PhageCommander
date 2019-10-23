@@ -3,7 +3,6 @@ from abc import abstractmethod
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-import genequery.gquery as gq
 
 
 class exportDialog(QDialog):
@@ -254,7 +253,8 @@ class exportDialog(QDialog):
 
 
 if __name__ == '__main__':
+    from genequery.gquery import QueryData
     app = QApplication([])
-    dig = exportDialog(gq.QueryData())
+    dig = exportDialog(QueryData())
     dig.show()
     app.exec_()
