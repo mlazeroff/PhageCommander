@@ -752,7 +752,20 @@ class exportGenbankDialog(genequery.GuiWidgets.exportDialog):
             genesToExport.append(Gene.GeneUtils.findMostGeneOccurrences(geneSet))
 
         # output to file
-        Gene.GeneUtils.genbankToFile(str(self.queryData.sequence.seq).lower(), genesToExport, self.saveFileName)
+        try:
+            Gene.GeneUtils.genbankToFile(str(self.queryData.sequence.seq).lower(), genesToExport, self.saveFileName)
+        except PermissionError as e:
+            QMessageBox.warning(self,
+                                'Permission Denied',
+                                'Could not write to: \"{}\". Permission denied.'.format(self.saveFileName))
+            # go back to dialogue
+            return
+        except Exception as e:
+            QMessageBox.warning(self,
+                                'Could Not Write to File',
+                                'Could not write to: \"{}\".\n{}'.format(self.saveFileName, str(e)))
+            # go back to dialogue
+            return
 
         # save file location setting
         saveFileDir = os.path.split(self.saveFileName)[0]
@@ -784,6 +797,8 @@ class GeneMain(QMainWindow):
     """
     Main Window
     """
+
+    _LAST_OPEN_FILE_LOCATION_SETTING = 'GENE_MAIN/last_open_file_location'
 
     def __init__(self, parent=None):
         super(GeneMain, self).__init__(parent)
@@ -910,10 +925,11 @@ class GeneMain(QMainWindow):
             return
 
         # open file dialog
+        openFileDir = self.settings.value(self._LAST_OPEN_FILE_LOCATION_SETTING)
         fileExtensions = ['GQ Files (*.gq)', 'All Files (*.*)']
         openFileName = QFileDialog.getOpenFileName(self,
                                                    'Open Query File...',
-                                                   '',
+                                                   openFileDir,
                                                    ';;'.join(fileExtensions))
 
         # check if user provided a file
@@ -934,6 +950,8 @@ class GeneMain(QMainWindow):
                     self.fileOpened = True
                     self.saveEnabled = True
                     self.enableActions()
+                    # save location
+                    self.settings.setValue(self._LAST_OPEN_FILE_LOCATION_SETTING, os.path.split(openFileName[0])[0])
                     # change window titles
                     baseFileName = os.path.split(self.queryData.fileName)[1]
                     self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
@@ -1364,6 +1382,9 @@ class GeneMain(QMainWindow):
         # COLOR SETTINGS
         ColorTable.checkDefaultSettings(self.settings)
 
+        # OPEN FILE LOCATION
+        if self.settings.value(self._LAST_OPEN_FILE_LOCATION_SETTING) is None:
+            self.settings.setValue(self._LAST_OPEN_FILE_LOCATION_SETTING, '')
 
 # MAIN FUNCTION
 def main():

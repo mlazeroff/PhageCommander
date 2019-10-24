@@ -518,7 +518,13 @@ class GeneUtils:
         # dictionary: repr(Gene): [<Gene>, occurrences]
         geneOccurrences = dict()
         # calculate frequencies of each gene
+        currGene = genes[0]
         for gene in genes:
+            # check if not the same gene, if so, throw error
+            if gene != currGene:
+                raise ValueError('{} does not match {}'.format(repr(gene), repr(currGene)))
+            currGene = gene
+
             geneStr = repr(gene)
             if geneStr in geneOccurrences:
                 geneOccurrences[geneStr][1] += 1
