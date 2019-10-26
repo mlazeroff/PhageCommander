@@ -953,8 +953,7 @@ class GeneMain(QMainWindow):
                     # save location
                     self.settings.setValue(self._LAST_OPEN_FILE_LOCATION_SETTING, os.path.split(openFileName[0])[0])
                     # change window titles
-                    baseFileName = os.path.split(self.queryData.fileName)[1]
-                    self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
+                    self.setWindowTitle('GeneQuery - {}'.format(openFileName[0]))
                     # update table
                     self.updateTable()
 
@@ -1385,6 +1384,7 @@ class GeneMain(QMainWindow):
         # OPEN FILE LOCATION
         if self.settings.value(self._LAST_OPEN_FILE_LOCATION_SETTING) is None:
             self.settings.setValue(self._LAST_OPEN_FILE_LOCATION_SETTING, '')
+
 
 # MAIN FUNCTION
 def main():
