@@ -1,5 +1,5 @@
 include genequery/species.txt
 include genequery/prodigal.exe
-include genequery/GuiWidgets
+include genequery/GuiWidgets/*
 include README.md
 include LICENSE
