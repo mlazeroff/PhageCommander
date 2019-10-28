@@ -42,6 +42,10 @@ class ProdigalRelease:
         if not os.path.exists(location):
             raise IsADirectoryError
 
+        system = system.lower()
+        if system == 'darwin':
+            system = _OSX
+
         # check if specified system is supported
         if system not in self.SUPPORTED_SYSTEMS:
             raise ValueError('Prodigal does not support this system: {}'.format(system))
