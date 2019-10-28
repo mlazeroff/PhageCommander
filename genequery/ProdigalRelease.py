@@ -1,6 +1,4 @@
 import platform
-import shutil
-import pathlib
 import os
 from subprocess import Popen, PIPE
 import requests
@@ -41,7 +39,7 @@ class ProdigalRelease:
         """
         # check if path exists
         if not os.path.exists(location):
-            raise IsADirectoryError
+            raise IsADirectoryError('\"{} is not a valid directory\"'.format(location))
 
         system = system.lower()
         if system == 'darwin':
