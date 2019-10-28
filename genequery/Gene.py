@@ -55,11 +55,14 @@ class GeneFile:
         def __init__(self, message):
             self.message = message
 
-    def __init__(self, sequence_file, species):
+    def __init__(self, sequence_file: str, species: str, prodigalPath: str = None):
         """
         Constructor
         Generates necessary parameters for post requests from DNA fasta file
-        :param sequence_file:
+        :param sequence_file: fasta sequence file path
+        :param species: species of DNA sequence
+            * Can find candidates in genequery/species.txt
+        :param prodigalPath: path to Prodigal binary
         """
         # Load DNA Sequence into memory
         input_file_data = b''
@@ -71,6 +74,7 @@ class GeneFile:
 
         # full path
         self.full = sequence_file
+
         # get base file name
         self.name = str(os.path.basename(sequence_file).split('.')[0])
 
@@ -85,6 +89,9 @@ class GeneFile:
 
         # dictionary for storing query outputs
         self.query_data = {tool: '' for tool in TOOLS}
+
+        # path for prodigal
+        self.prodigalPath = prodigalPath
 
     def glimmer_query(self):
         """
@@ -312,20 +319,22 @@ class GeneFile:
         """
         Calls prodigal to analyze file
         """
-        # get path for prodigal exe
-        exe_location = os.path.join(os.path.dirname(__file__), 'prodigal.windows.exe')
-
         # generate prodigal command and run
-        cmd = '\"{}\" -i \"{}\" -p meta'.format(exe_location, self.full)
-        proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
-        stdout, stderr = proc.communicate()
+        if self.prodigalPath is None:
+            raise GeneFile.GeneFileError('Prodigal binary path was not given')
+        elif not os.path.exists(self.prodigalPath):
+            raise GeneFile.GeneFileError('{} is not a valid path'.format(self.prodigalPath))
+        else:
+            cmd = '\"{}\" -i \"{}\" -p meta'.format(self.prodigalPath, self.full)
+            proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+            stdout, stderr = proc.communicate()
 
-        # check for error, exit if so
-        if proc.returncode != 0:
-            print(stderr)
-            raise GeneFile.GeneFileError("Prodigal")
+            # check for error, exit if so
+            if proc.returncode != 0:
+                print(stderr)
+                raise GeneFile.GeneFileError("Prodigal")
 
-        self.query_data['prodigal'] = stdout.decode('utf-8')
+            self.query_data['prodigal'] = stdout.decode('utf-8')
 
 
 class GeneError(Error):

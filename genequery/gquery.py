@@ -607,7 +607,7 @@ class QueryManager(QThread):
     # signal emitted each time a querying thread returns
     progressSig = pyqtSignal()
 
-    def __init__(self, queryData):
+    def __init__(self, queryData: QueryData, settings: QSettings):
         """
         Initializes and starts threads for each tool to be called
         :param queryData: QueryData object
@@ -618,7 +618,8 @@ class QueryManager(QThread):
         self.queryData = queryData
 
         # create GeneFile
-        self.geneFile = Gene.GeneFile(self.queryData.fileName, self.queryData.species)
+        self.geneFile = Gene.GeneFile(self.queryData.fileName, self.queryData.species,
+                                      settings.value(GeneMain.PRODIGAL_BINARY_LOCATION_SETTING))
 
         # load sequence
         # with open(self.queryData.fileName) as seqFile:
@@ -659,14 +660,14 @@ class QueryDialog(QDialog):
     Dialog for querying prediction tools
     """
 
-    def __init__(self, queryData, parent=None):
+    def __init__(self, queryData: QueryData, settings: QSettings, parent=None):
         super(QueryDialog, self).__init__(parent)
 
         self.queryData = queryData
 
         mainLayout = QVBoxLayout()
         # WIDGETS ----------------------------------------------------------------------------------
-        self.thread = QueryManager(queryData)
+        self.thread = QueryManager(queryData, settings)
         self.thread.finished.connect(self.queryStop)
         self.thread.progressSig.connect(self.updateProgress)
 
@@ -812,7 +813,7 @@ class GeneMain(QMainWindow):
     """
 
     _LAST_OPEN_FILE_LOCATION_SETTING = 'GENE_MAIN/last_open_file_location'
-    _PRODIGAL_BINARY_LOCATION_SETTING = 'GENE_MAIN/prodigal_location'
+    PRODIGAL_BINARY_LOCATION_SETTING = 'GENE_MAIN/prodigal_location'
 
     def __init__(self, parent=None):
         super(GeneMain, self).__init__(parent)
@@ -905,12 +906,12 @@ class GeneMain(QMainWindow):
         # temporary data in case user quits the dialogs
         tmpQueryData = QueryData()
         # open query dialog
-        dialog = NewFileDialog(tmpQueryData, self.settings, self.settings.value(self._PRODIGAL_BINARY_LOCATION_SETTING))
+        dialog = NewFileDialog(tmpQueryData, self.settings, self.settings.value(self.PRODIGAL_BINARY_LOCATION_SETTING))
         # if user initiates a query
         if dialog.exec_():
             # query tools
             self.queryData = tmpQueryData
-            queryDialog = QueryDialog(self.queryData)
+            queryDialog = QueryDialog(self.queryData, self.settings)
 
             # query to tools is successful
             if queryDialog.exec_():
@@ -1360,7 +1361,7 @@ class GeneMain(QMainWindow):
 
     def checkProdigal(self):
 
-        prodigalPath = self.settings.value(self._PRODIGAL_BINARY_LOCATION_SETTING)
+        prodigalPath = self.settings.value(self.PRODIGAL_BINARY_LOCATION_SETTING)
         # if binary does not exist or binary has disappeared, prompt to download
         if prodigalPath is None or not os.path.exists(prodigalPath):
             currRelease = ProdigalRelease()
@@ -1369,9 +1370,9 @@ class GeneMain(QMainWindow):
             td = ThreadData(pathlib.Path(__file__).parent)
             prodigalDownloadDig = genequery.GuiWidgets.ProdigalDownloadDialog(currRelease, td)
             if prodigalDownloadDig.exec_():
-                self.settings.setValue(self._PRODIGAL_BINARY_LOCATION_SETTING, td.data)
+                self.settings.setValue(self.PRODIGAL_BINARY_LOCATION_SETTING, td.data)
             else:
-                self.settings.setValue(self._PRODIGAL_BINARY_LOCATION_SETTING, None)
+                self.settings.setValue(self.PRODIGAL_BINARY_LOCATION_SETTING, None)
 
     def createAction(self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False,
                      signal='triggered()'):
