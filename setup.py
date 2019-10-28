@@ -18,6 +18,8 @@ setuptools.setup(
     entry_points={'gui_scripts': 'genequery = genequery.gquery:main'},
     classifiers=["Programming Language :: Python :: 3",
                  "License :: OSI Approved :: GPL-3",
-                 "Operating System :: Windows"],
+                 "Operating System :: Windows",
+                 "Operating System :: MacOS X",
+                 "Operating System :: Linux"],
     include_package_data=True,
 )
