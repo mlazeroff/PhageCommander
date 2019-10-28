@@ -1,5 +1,6 @@
 import os
 import pickle
+import pathlib
 from abc import abstractmethod
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -14,6 +15,8 @@ from Bio.Alphabet import IUPAC
 from typing import List, Callable
 from genequery import Gene
 import genequery.GuiWidgets
+from genequery.Utilities import ThreadData, ProdigalRelease
+
 
 APP_NAME = 'GeneQuery'
 
@@ -799,6 +802,7 @@ class GeneMain(QMainWindow):
     """
 
     _LAST_OPEN_FILE_LOCATION_SETTING = 'GENE_MAIN/last_open_file_location'
+    _PRODIGAL_BINARY_LOCATION_SETTING = 'GENE_MAIN/prodigal_location'
 
     def __init__(self, parent=None):
         super(GeneMain, self).__init__(parent)
@@ -874,6 +878,9 @@ class GeneMain(QMainWindow):
         self.enableActions()
         # SETTINGS ---------------------------------------------------------------------------------
         self.setWindowTitle('GeneQuery')
+
+        # check for Prodigal binary
+        self.checkProdigal()
 
     # ACTION METHODS -------------------------------------------------------------------------------
     @pyqtSlot()
@@ -1340,6 +1347,21 @@ class GeneMain(QMainWindow):
             self.saveAction.setEnabled(True)
         else:
             self.saveAction.setEnabled(False)
+
+    def checkProdigal(self):
+
+        prodigalPath = self.settings.value(self._PRODIGAL_BINARY_LOCATION_SETTING)
+        # if binary does not exist or binary has disappeared, prompt to download
+        if prodigalPath is None or not os.path.exists(prodigalPath):
+            currRelease = ProdigalRelease()
+            # prompt to download prodigal
+            # location to store binary is gquery's folder
+            td = ThreadData(pathlib.Path(__file__).parent)
+            prodigalDownloadDig = genequery.GuiWidgets.ProdigalDownloadDialog(currRelease, td)
+            if prodigalDownloadDig.exec_():
+                self.settings.setValue(self._PRODIGAL_BINARY_LOCATION_SETTING, td.data)
+            else:
+                self.settings.setValue(self._PRODIGAL_BINARY_LOCATION_SETTING, None)
 
     def createAction(self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False,
                      signal='triggered()'):

@@ -1,1 +1,2 @@
 from genequery.GuiWidgets.exportDialogue import exportDialog
+from genequery.GuiWidgets.ProdigalDialogue import ProdigalDownloadDialog

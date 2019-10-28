@@ -1,6 +1,7 @@
 import platform
 import os
 from subprocess import Popen, PIPE
+import pathlib
 import requests
 import bs4
 import re
@@ -55,7 +56,8 @@ class ProdigalRelease:
             fileName = 'prodigal-{}-{}'.format(self.version, system)
             if system == _WINDOWS:
                 fileName += '.exe'
-            fullPath = os.path.join(location, fileName)
+            location = pathlib.Path(location)
+            fullPath = location / fileName
             with open(fullPath, 'wb') as file:
                 for chunk in r.iter_content(chunk_size=10 * 1024):
                     if chunk:
@@ -66,7 +68,7 @@ class ProdigalRelease:
             proc = Popen('chmod +x {}'.format(fullPath), stdout=PIPE, stderr=PIPE, shell=True)
             stdout, stderr = proc.communicate()
 
-        return fullPath
+        return str(fullPath)
 
     def _getReleaseInfo(self):
         """
@@ -94,9 +96,5 @@ class ProdigalRelease:
 
 if __name__ == '__main__':
     release = ProdigalRelease()
-    binary = release.getBinary(platform.system(), os.path.dirname(__file__))
+    binary = release.getBinary(platform.system(), r'C:\Users\mdlaz\Desktop')
     print(binary)
-    prodProc = Popen(binary, stdout=PIPE, stderr=PIPE, shell=True)
-    out, err = prodProc.communicate()
-    print(out)
-    print(err)

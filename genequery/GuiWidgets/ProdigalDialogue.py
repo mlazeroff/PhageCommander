@@ -1,27 +1,8 @@
 import platform
-import os
-import time
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-from genequery.ProdigalRelease import ProdigalRelease
-
-
-class ThreadData:
-    """
-    Class for representing a thread safe piece of data
-    """
-
-    def __init__(self, data=None):
-        self._data = [data]
-
-    @property
-    def data(self):
-        return self._data[0]
-
-    @data.setter
-    def data(self, dataPiece):
-        self._data[0] = dataPiece
+from genequery.Utilities import ThreadData, ProdigalRelease
 
 
 class ProdigalDownloadDialog(QDialog):
@@ -141,7 +122,7 @@ class DownloadProdigal(QThread):
 if __name__ == '__main__':
     app = QApplication([])
     release = ProdigalRelease()
-    td = ThreadData(r'C:\Users\mdlaz\D')
+    td = ThreadData(r'C:\Users\mdlaz\Desktop')
     dig = ProdigalDownloadDialog(release, td)
     dig.show()
     app.exec_()
