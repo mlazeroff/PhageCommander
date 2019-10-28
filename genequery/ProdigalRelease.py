@@ -60,8 +60,8 @@ class ProdigalRelease:
 
         # make linux and mac versions executable
         if system == _LINUX or system == _OSX:
-            proc = Popen('chmod +x {}'.format(fullPath))
-            stdout, stderr = Popen.communicate()
+            proc = Popen(['chmod', '+x', fullPath], stdout=PIPE, stderr=PIPE, shell=True)
+            stdout, stderr = proc.communicate()
 
         return fullPath
 
