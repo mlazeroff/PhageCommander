@@ -343,11 +343,15 @@ class NewFileDialog(QDialog):
 
     _LAST_FASTA_FILE_LOCATION_SETTING = 'NEW_FILE_DIALOG/last_fasta_location'
 
-    def __init__(self, queryData, settings, parent=None):
+    def __init__(self, queryData, settings, prodigalPath=None, parent=None):
         """
         Initialize Dialog
         :param queryData: ToolSpecies object
+        :param settings: QSettings
+        :param prodigalPath: path to Prodigal binary
+            * str or None
         :param parent: parent widget
+
         """
         super(NewFileDialog, self).__init__(parent)
         self.queryData = queryData
@@ -394,9 +398,15 @@ class NewFileDialog(QDialog):
         self.toolCheckBoxes['prodigal'] = prodigalBox
         for box in self.toolCheckBoxes.values():
             # set all boxes to default to being checked
-            box.setChecked(True)
+            # box.setChecked(True)
+            box.setCheckState(Qt.Checked)
             # check to disable the species combobox on every click of a box
             box.stateChanged.connect(self.disableSpeciesCheck)
+
+        # check if Prodigal binary exists, if not, disable Prodigal
+        if prodigalPath is None:
+            prodigalBox.setCheckable(False)
+            prodigalBox.setEnabled(False)
 
         # species combo box
         speciesLabel = QLabel('Species:')
@@ -895,7 +905,7 @@ class GeneMain(QMainWindow):
         # temporary data in case user quits the dialogs
         tmpQueryData = QueryData()
         # open query dialog
-        dialog = NewFileDialog(tmpQueryData, self.settings)
+        dialog = NewFileDialog(tmpQueryData, self.settings, self.settings.value(self._PRODIGAL_BINARY_LOCATION_SETTING))
         # if user initiates a query
         if dialog.exec_():
             # query tools
