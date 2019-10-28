@@ -1,5 +1,6 @@
 import platform
 import shutil
+import pathlib
 import os
 from subprocess import Popen, PIPE
 import requests
@@ -64,7 +65,7 @@ class ProdigalRelease:
 
         # make linux and mac versions executable
         if system == _LINUX or system == _OSX:
-            proc = Popen(['chmod', '+x', fullPath], stdout=PIPE, stderr=PIPE, shell=True)
+            proc = Popen('chmod +x {}'.format(fullPath), stdout=PIPE, stderr=PIPE, shell=True)
             stdout, stderr = proc.communicate()
 
         return fullPath
@@ -95,4 +96,9 @@ class ProdigalRelease:
 
 if __name__ == '__main__':
     release = ProdigalRelease()
-    print(release.getBinary('windows', 'C:\\Users\\mdlaz\\Desktop'))
+    binary = release.getBinary(platform.system(), os.path.dirname(__file__))
+    print(binary)
+    prodProc = Popen(binary, stdout=PIPE, stderr=PIPE, shell=True)
+    out, err = prodProc.communicate()
+    print(out)
+    print(err)
