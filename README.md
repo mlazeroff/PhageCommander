@@ -20,24 +20,7 @@ Install via pip and git
 pip install git+https://github.com/mlazeroff/GeneQuery
 ```
 ## Using the tool
-### Terminal Version
-Usage: gquery "fasta_sequence" "species" "output_directory" -rm
-* fasta_sequence - Fasta formatted DNA sequence file
-* species - DNA species, full list located in species.txt
-* output_directory  - folder to output files to
-* -rm - delete intermediate output files, leaves only .xlsx file
-```angular2html
->>> gquery Lisa.fasta Acidianus_hospitalis_W1 ./output/
-Querying:
-Glimmer...done
-GeneMark...done
-Hmm...done
-GMS...done
-GMS2...done
-Heuristic...done
-Files written to: ./output/
->>>
-```
+
 ### GUI Version
 Start via terminal
 ```angular2html
