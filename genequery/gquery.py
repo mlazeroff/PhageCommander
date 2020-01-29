@@ -560,11 +560,12 @@ class QueryThread(QThread):
     Returns the list of Genes via reference
     """
 
-    def __init__(self, geneFile, tool, queryData):
+    def __init__(self, geneFile, tool, queryData, settings):
         """
         Constructor
         :param geneFile: GeneFile object of DNA file
         :param tool: tool to call
+        :param settings: QSettings
             * See TOOL_NAMES global
         """
         super(QueryThread, self).__init__()
@@ -572,6 +573,7 @@ class QueryThread(QThread):
         self.tool = tool
         self.queryData = queryData
         self.geneFile = geneFile
+        self.settings = settings
 
     def run(self):
         """
@@ -607,7 +609,7 @@ class QueryManager(QThread):
     # signal emitted each time a querying thread returns
     progressSig = pyqtSignal()
 
-    def __init__(self, queryData):
+    def __init__(self, queryData, settings):
         """
         Initializes and starts threads for each tool to be called
         :param queryData: QueryData object
@@ -616,9 +618,10 @@ class QueryManager(QThread):
 
         # VARIABLES --------------------------------------------------------------------------------
         self.queryData = queryData
+        self.settings = settings
 
         # create GeneFile
-        self.geneFile = Gene.GeneFile(self.queryData.fileName, self.queryData.species)
+        self.geneFile = Gene.GeneFile(self.queryData.fileName, self.queryData.species, self.settings.value(GeneMain._PRODIGAL_BINARY_LOCATION_SETTING))
 
         # load sequence
         # with open(self.queryData.fileName) as seqFile:
@@ -630,7 +633,7 @@ class QueryManager(QThread):
         self.threads = []
         for tool in self.queryData.tools:
             if self.queryData.tools[tool] is True:
-                self.threads.append(QueryThread(self.geneFile, tool, self.queryData))
+                self.threads.append(QueryThread(self.geneFile, tool, self.queryData, self.settings))
 
         for thread in self.threads:
             thread.finished.connect(self.queryReturn)
@@ -659,14 +662,15 @@ class QueryDialog(QDialog):
     Dialog for querying prediction tools
     """
 
-    def __init__(self, queryData, parent=None):
+    def __init__(self, queryData, settings, parent=None):
         super(QueryDialog, self).__init__(parent)
 
         self.queryData = queryData
+        self.settings = settings
 
         mainLayout = QVBoxLayout()
         # WIDGETS ----------------------------------------------------------------------------------
-        self.thread = QueryManager(queryData)
+        self.thread = QueryManager(queryData, self.settings)
         self.thread.finished.connect(self.queryStop)
         self.thread.progressSig.connect(self.updateProgress)
 
@@ -910,7 +914,7 @@ class GeneMain(QMainWindow):
         if dialog.exec_():
             # query tools
             self.queryData = tmpQueryData
-            queryDialog = QueryDialog(self.queryData)
+            queryDialog = QueryDialog(self.queryData, self.settings)
 
             # query to tools is successful
             if queryDialog.exec_():

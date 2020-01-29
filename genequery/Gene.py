@@ -16,6 +16,7 @@ import Bio.SeqFeature
 import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
+from PyQt5.QtCore import QSettings
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.gatech.edu/GeneMark/'
@@ -55,7 +56,7 @@ class GeneFile:
         def __init__(self, message):
             self.message = message
 
-    def __init__(self, sequence_file, species):
+    def __init__(self, sequence_file, species, prodigalLocation=None):
         """
         Constructor
         Generates necessary parameters for post requests from DNA fasta file
@@ -85,6 +86,9 @@ class GeneFile:
 
         # dictionary for storing query outputs
         self.query_data = {tool: '' for tool in TOOLS}
+
+        # store prodigal location
+        self.prodigalLocation = prodigalLocation
 
     def glimmer_query(self):
         """
@@ -312,11 +316,11 @@ class GeneFile:
         """
         Calls prodigal to analyze file
         """
-        # get path for prodigal exe
-        exe_location = os.path.join(os.path.dirname(__file__), 'prodigal.windows.exe')
+        # # get path for prodigal exe
+        # exe_location = os.path.join(os.path.dirname(__file__), 'prodigal.windows.exe')
 
         # generate prodigal command and run
-        cmd = '\"{}\" -i \"{}\" -p meta'.format(exe_location, self.full)
+        cmd = '\"{}\" -i \"{}\" -p meta'.format(self.prodigalLocation, self.full)
         proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
         stdout, stderr = proc.communicate()
 
@@ -338,16 +342,33 @@ class Gene:
     Class for representing a potential gene encoding
     """
 
-    def __init__(self, start, stop, direction, identity=''):
+    def __init__(self, start: str, stop: str, direction: str, identity=''):
         """
         Constructor
-        :param start:  start codon (int)
-        :param stop:   end codon (int)
+        :param start:  start codon (str)
+        :param stop:   end codon (str)
         :param direction: +/-
         :param identity: optional identifier
         """
-        self.start = int(start)
-        self.stop = int(stop)
+        # check for "<3" or ">3" style starts, stops
+        if '<' in start:
+            start = start.split('<')[-1]
+            self.start = int(start) - 1
+        elif '&lt;' in start:
+            start = start.split('&lt;')[-1]
+            self.start = int(start) - 1
+        else:
+            self.start = int(start)
+
+        if '>' in stop:
+            stop = stop.split('>')[-1]
+            self.stop = int(stop) + 1
+        elif '&gt;' in stop:
+            stop = stop.split('&gt;')[-1]
+            self.stop = int(stop) + 1
+        else:
+            self.stop = int(stop)
+
         self.identity = identity
         # check for proper direction
         try:
@@ -800,7 +821,8 @@ class GeneParse:
                         gene_str = gene_str[len('complement'):]
                         # remove ()
                         gene_str = gene_str[1:-1]
-                    start, end = [int(x) for x in gene_str.split('.') if x.isnumeric()]
+                    start, end = gene_str.split('..')
+                    # start, end = [int(x) for x in gene_str.split('.') if x.isnumeric()]
                     # create gene
                     genes.append(Gene(start, end, direction, identity=identity))
 
