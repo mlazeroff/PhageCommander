@@ -66,4 +66,33 @@ class Rast:
         else:
             raise self.RastException('Received status response of :{}'.format(submitResponse['status']))
 
+    def checkIfComplete(self):
+        """
+        Checks if the current job is complete
+        :return: True/False
+        """
+        _SUCCESS_FIELD = 'status'
+        _SUCCESSFUL_STATUS = 'complete'
+        _CHECK_STATUS_FUNCTION = 'status_of_RAST_job'
+
+        args = '---\n-job:\n  - {}\n'.format(self.jobId)
+        payload = {'function': _CHECK_STATUS_FUNCTION,
+                   'username': self.username,
+                   'password': self.password,
+                   'args': args}
+
+        statusReq = requests.post(RAST_URL, data=payload)
+        statusContent = yaml.load(statusReq.text, Loader=yaml.FullLoader)
+        jobStatus = statusContent[self.jobId][_SUCCESS_FIELD]
+        self.status = jobStatus
+        return True if jobStatus == _SUCCESSFUL_STATUS else False
+
+
+if __name__ == '__main__':
+    rast = Rast('mlazeroff', 'chester')
+    rast.jobId = 822395
+    print(rast.checkIfComplete())
+
+
+
 
