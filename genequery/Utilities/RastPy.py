@@ -113,13 +113,33 @@ class Rast:
 
         return retrieveReq.text
 
+    def deleteJob(self):
+        """
+        Deletes the current job
+        """
+        _DELETE_FUNCTION = 'delete_RAST_job'
+
+        if self.jobId is None:
+            raise self.RastException('RAST DELETE: No current job. Cannot delete.')
+
+        payload = {'function': _DELETE_FUNCTION,
+                   'username': self.username,
+                   'password': self.password,
+                   'args': '---\n-job:\n  - {}\n'.format(self.jobId)}
+
+        deleteReq = requests.post(RAST_URL, data=payload)
+        deleteReq.raise_for_status()
+
+        deleteContent = yaml.safe_load(deleteReq.text)
+        print(deleteContent[self.jobId]['status'])
+
 
 if __name__ == '__main__':
     rast = Rast('mlazeroff', 'chester')
     rast.submit("D:\mdlaz\Documents\College\Research\programs\GeneQuery\\tests\sequences\Ronan.fasta",
                 'ROONAN')
     time.sleep(.5)
-    print(rast.checkIfComplete())
+    rast.deleteJob()
 
 
 
