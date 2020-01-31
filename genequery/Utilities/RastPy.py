@@ -1,6 +1,7 @@
 import os
+import time
 import requests
-import yaml
+from ruamel import yaml
 
 RAST_URL = 'http://pubseed.theseed.org/rast/server.cgi'
 
@@ -49,8 +50,13 @@ class Rast:
                           '-keepGeneCalls': 0,
                           '-non_active': 0,
                           '-organismName': sequenceName,
-                          '-taxonomyID': '',
-                          '-file': fastaContent}, default_style='|')
+                          '-taxonomyID': ''}, Dumper=yaml.RoundTripDumper)
+        # create file content in yaml format
+        file = '-file: |-\n'
+        for line in fastaContent.splitlines():
+            # two spaces indentation for inline string
+            file += '  {}\n'.format(line)
+        args += file
 
         payload = {'function': _SUBMIT_FUNCTION,
                    'args': args,
@@ -60,7 +66,7 @@ class Rast:
         submitReq = requests.post(RAST_URL, data=payload)
         submitReq.raise_for_status()
 
-        submitResponse = yaml.load(submitReq.text, Loader=yaml.FullLoader)
+        submitResponse = yaml.safe_load(submitReq.text)
         if submitResponse['status'] == 'ok':
             self.jobId = submitResponse['job_id']
             self.status = 'incomplete'
@@ -84,7 +90,7 @@ class Rast:
 
         statusReq = requests.post(RAST_URL, data=payload)
         statusReq.raise_for_status()
-        statusContent = yaml.load(statusReq.text, Loader=yaml.FullLoader)
+        statusContent = yaml.safe_load(statusReq.text)
         jobStatus = statusContent[self.jobId][_SUCCESS_FIELD]
         self.status = jobStatus
         return True if jobStatus == _SUCCESSFUL_STATUS else False
@@ -92,10 +98,11 @@ class Rast:
     def retrieveData(self):
         """
         Retrieves the gff3 data for the associated job
+        :return: gff3 content
         """
         _RETRIEVE_FUNCTION = 'retrieve_RAST_job'
 
-        args = yaml.dump({'-format': 'gf33_stripped', '-job': self.jobId})
+        args = yaml.dump({'-format': 'gff3_stripped', '-job': self.jobId})
         payload = {'function': _RETRIEVE_FUNCTION,
                    'username': self.username,
                    'password': self.password,
@@ -109,7 +116,9 @@ class Rast:
 
 if __name__ == '__main__':
     rast = Rast('mlazeroff', 'chester')
-    rast.jobId = 822395
+    rast.submit("D:\mdlaz\Documents\College\Research\programs\GeneQuery\\tests\sequences\Ronan.fasta",
+                'ROONAN')
+    time.sleep(.5)
     print(rast.checkIfComplete())
 
 
