@@ -58,6 +58,7 @@ class Rast:
                    'password': self.password}
 
         submitReq = requests.post(RAST_URL, data=payload)
+        submitReq.raise_for_status()
 
         submitResponse = yaml.load(submitReq.text, Loader=yaml.FullLoader)
         if submitResponse['status'] == 'ok':
@@ -82,10 +83,28 @@ class Rast:
                    'args': args}
 
         statusReq = requests.post(RAST_URL, data=payload)
+        statusReq.raise_for_status()
         statusContent = yaml.load(statusReq.text, Loader=yaml.FullLoader)
         jobStatus = statusContent[self.jobId][_SUCCESS_FIELD]
         self.status = jobStatus
         return True if jobStatus == _SUCCESSFUL_STATUS else False
+
+    def retrieveData(self):
+        """
+        Retrieves the gff3 data for the associated job
+        """
+        _RETRIEVE_FUNCTION = 'retrieve_RAST_job'
+
+        args = yaml.dump({'-format': 'gf33_stripped', '-job': self.jobId})
+        payload = {'function': _RETRIEVE_FUNCTION,
+                   'username': self.username,
+                   'password': self.password,
+                   'args': args}
+
+        retrieveReq = requests.post(RAST_URL, data=payload)
+        retrieveReq.raise_for_status()
+
+        return retrieveReq.text
 
 
 if __name__ == '__main__':
