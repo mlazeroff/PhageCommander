@@ -6,12 +6,14 @@ from ruamel import yaml
 RAST_URL = 'http://pubseed.theseed.org/rast/server.cgi'
 
 
+class RastException(Exception):
+    pass
+
+
 class Rast:
     """
     Class for representing queries to RAST annotation servers
     """
-    class RastException(Exception):
-        pass
 
     def __init__(self, username: str, password: str):
         """
@@ -29,7 +31,7 @@ class Rast:
         Submits a file for annotation
         :param filePath: name of a fasta file
         :param sequenceName: name of the sequence
-        Raises an exception if not successful
+        Raises RastException if not successful
         """
         _SUBMIT_FUNCTION = 'submit_RAST_job'
 
@@ -71,7 +73,7 @@ class Rast:
             self.jobId = submitResponse['job_id']
             self.status = 'incomplete'
         else:
-            raise self.RastException('Received status response of :{}'.format(submitResponse['status']))
+            raise RastException('Submission: Received status response of :{}'.format(submitResponse['status']))
 
     def checkIfComplete(self):
         """
@@ -120,7 +122,7 @@ class Rast:
         _DELETE_FUNCTION = 'delete_RAST_job'
 
         if self.jobId is None:
-            raise self.RastException('RAST DELETE: No current job. Cannot delete.')
+            raise RastException('RAST DELETE: No current job. Cannot delete.')
 
         payload = {'function': _DELETE_FUNCTION,
                    'username': self.username,

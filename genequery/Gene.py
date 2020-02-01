@@ -17,6 +17,7 @@ import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from PyQt5.QtCore import QSettings
+from genequery.Utilities import RastPy
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.gatech.edu/GeneMark/'
@@ -33,7 +34,7 @@ with open(species_file, 'r') as file:
     SPECIES = [specie.strip() for specie in file]
 
 # tools
-TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer']
+TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer', 'rast']
 
 
 class Error(Exception):
@@ -317,7 +318,6 @@ class GeneFile:
         Calls prodigal to analyze file
         """
         # # get path for prodigal exe
-        # exe_location = os.path.join(os.path.dirname(__file__), 'prodigal.windows.exe')
 
         # generate prodigal command and run
         cmd = '\"{}\" -i \"{}\" -p meta'.format(self.prodigalLocation, self.full)
@@ -330,6 +330,28 @@ class GeneFile:
             raise GeneFile.GeneFileError("Prodigal")
 
         self.query_data['prodigal'] = stdout.decode('utf-8')
+
+    def rastQuery(self, username, password):
+        """
+        Submit the fasta file to RAST servers for submission
+        :param username: RAST username
+        :param password: RAST password
+        :return:
+        """
+        # create RAST object
+        rastJob = RastPy.Rast(username, password)
+
+        # submit
+        rastJob.submit(self.full, self.name)
+
+        # check periodically for job completion
+        RAST_COMPLETION_CHECK_DELAY = 15
+        time.sleep(RAST_COMPLETION_CHECK_DELAY)
+        while not rastJob.checkIfComplete():
+            time.sleep(RAST_COMPLETION_CHECK_DELAY)
+
+        # job is complete - retrieve gene annotation
+        self.query_data['rast'] = rastJob.retrieveData()
 
 
 class GeneError(Error):
