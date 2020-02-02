@@ -59,7 +59,8 @@ class ColorTable(QWidget):
         (146, 205, 220),
         (49, 134, 155),
         (33, 89, 103),
-        (21, 59, 68)
+        (21, 59, 68),
+        (2, 47, 58)
     ]
     _DEFAULT_MAJORITY_COLORS = [
         (0, 0, 0),
@@ -68,9 +69,11 @@ class ColorTable(QWidget):
         (0, 0, 0),
         (255, 255, 255),
         (255, 255, 255),
+        (255, 255, 255),
         (255, 255, 255)
     ]
     _DEFAULT_MINORITY_COLORS = [
+        (255, 75, 75),
         (255, 75, 75),
         (255, 75, 75),
         (255, 75, 75),
@@ -89,7 +92,7 @@ class ColorTable(QWidget):
         # WIDGETS ------------------------------------------------------------------------------------------------------
         # Color Selection Table
         self.tableWidget = QTableWidget()
-        self.tableWidget.setRowCount(7)
+        self.tableWidget.setRowCount(len(TOOL_NAMES))
         self.tableWidget.setColumnCount(len(self._TABLE_COLUMN_HEADERS))
         self.tableWidget.setHorizontalHeaderLabels(self._TABLE_COLUMN_HEADERS)
         self.tableWidget.horizontalHeader()
@@ -107,7 +110,7 @@ class ColorTable(QWidget):
 
         # insert items into table
         tableHeight = self.tableWidget.horizontalHeader().height()
-        for i in range(7):
+        for i in range(len(TOOL_NAMES)):
             self.tableWidget.setRowHeight(i, 20)
             tableHeight += self.tableWidget.rowHeight(i)
             item = QTableWidgetItem()
