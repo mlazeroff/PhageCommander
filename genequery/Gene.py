@@ -338,20 +338,23 @@ class GeneFile:
         :param password: RAST password
         :return:
         """
-        # create RAST object
-        rastJob = RastPy.Rast(username, password)
-
-        # submit
-        rastJob.submit(self.full, self.name)
-
-        # check periodically for job completion
-        RAST_COMPLETION_CHECK_DELAY = 15
-        time.sleep(RAST_COMPLETION_CHECK_DELAY)
-        while not rastJob.checkIfComplete():
-            time.sleep(RAST_COMPLETION_CHECK_DELAY)
+        # TODO: Uncomment once GUI is complete
+        # # create RAST object
+        # rastJob = RastPy.Rast(username, password)
+        #
+        # # submit
+        # rastJob.submit(self.full, self.name)
+        #
+        # # check periodically for job completion
+        # RAST_COMPLETION_CHECK_DELAY = 15
+        # time.sleep(RAST_COMPLETION_CHECK_DELAY)
+        # while not rastJob.checkIfComplete():
+        #     time.sleep(RAST_COMPLETION_CHECK_DELAY)
 
         # job is complete - retrieve gene annotation
-        self.query_data['rast'] = rastJob.retrieveData()
+        with open('../tests/sequences/ronan.gff3') as file:
+            self.query_data['rast'] = file.read()
+        # self.query_data['rast'] = rastJob.retrieveData()
 
 
 class GeneError(Error):
@@ -375,19 +378,19 @@ class Gene:
         # check for "<3" or ">3" style starts, stops
         if '<' in start:
             start = start.split('<')[-1]
-            self.start = int(start) - 1
+            self.start = int(start)
         elif '&lt;' in start:
             start = start.split('&lt;')[-1]
-            self.start = int(start) - 1
+            self.start = int(start)
         else:
             self.start = int(start)
 
         if '>' in stop:
             stop = stop.split('>')[-1]
-            self.stop = int(stop) + 1
+            self.stop = int(stop)
         elif '&gt;' in stop:
             stop = stop.split('&gt;')[-1]
-            self.stop = int(stop) + 1
+            self.stop = int(stop)
         else:
             self.stop = int(stop)
 

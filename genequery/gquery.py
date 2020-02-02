@@ -21,7 +21,8 @@ from genequery.Utilities import ThreadData, ProdigalRelease
 APP_NAME = 'GeneQuery'
 
 # list of tool calls
-TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal', 'rast']
+RAST = 'rast'
+TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal', RAST]
 
 # mappings of tool names to appropriate methods
 # [queryMethod, parseMethod]
@@ -39,7 +40,7 @@ TOOL_METHODS = {'gm': [Gene.GeneFile.genemark_query,
                             Gene.GeneParse.parse_glimmer],
                 'prodigal': [Gene.GeneFile.prodigal_query,
                              Gene.GeneParse.parse_prodigal],
-                'rast': [Gene.GeneFile.rastQuery,
+                RAST : [Gene.GeneFile.rastQuery,
                          Gene.GeneParse.parse_rast]}
 
 
@@ -602,7 +603,12 @@ class QueryThread(QThread):
         # perform query
         # if query is unsuccessful, return the error instead
         try:
-            queryMethod(self.geneFile)
+            if self.tool == RAST:
+                username = self.settings.value(NewFileDialog._RAST_USERNAME_SETTING)
+                password = self.settings.value(NewFileDialog._RAST_PASSWORD_SETTING)
+                queryMethod(self.geneFile, username, password)
+            else:
+                queryMethod(self.geneFile)
         except Exception as e:
             self.queryData.toolData[self.tool] = e
             return
