@@ -850,6 +850,26 @@ class GeneParse:
 
         return genes
 
+    @staticmethod
+    def parse_rast(rast_data, identity=''):
+        """
+        Parse the gff3 formatted data for genes
+        :param rast_data: gff3 formatted gene annotations
+        :param identity: optional identity for genes
+        :return: List[Gene]
+        """
+        # find non comment lines
+        genes = []
+        for line in rast_data.splitlines():
+            if 'CDS' in line:
+                data = line.split('\t')
+                start = data[3]
+                stop = data[4]
+                direction = data[6]
+                genes.append(Gene(start, stop, direction, identity))
+
+        return genes
+
 
 def write_gene(gene, row, ws, indexes):
     """
@@ -1030,11 +1050,16 @@ def excel_write(output_directory, files, sequence):
 
 
 if __name__ == '__main__':
-    file = "D:\\mdlaz\\Documents\\college\\Research\\programs\\GeneQuery\\tests\\fasta_files\\Harrison rearranged.fasta"
-    for seq in SeqIO.parse(file, 'fasta'):
-        Dissequence = seq
-    gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
-    gfile.genemarkhmm_query()
-    data = gfile.query_data['hmm']
-    myGenes = GeneParse.parse_genemarkHmm(data)
-    print(GeneUtils.findMostGeneOccurrences(myGenes[13]))
+    # file = 'D:\mdlaz\Documents\College\Research\programs\GeneQuery\\tests\sequences\Ronan.fasta'
+    # for seq in SeqIO.parse(file, 'fasta'):
+    #     Dissequence = seq
+    # gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
+    # gfile.rastQuery(username='mlazeroff',
+    #                 password='chester')
+    # data = gfile.query_data['hmm']
+    # myGenes = GeneParse.parse_genemarkHmm(data)
+    # print(GeneUtils.findMostGeneOccurrences(myGenes[13]))
+    gff3_file = 'D:\mdlaz\Documents\College\Research\programs\GeneQuery\\tests\sequences\jung.gff3'
+    with open(gff3_file) as file:
+        content = file.read()
+    GeneParse.parse_rast(content)
