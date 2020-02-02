@@ -21,7 +21,7 @@ from genequery.Utilities import ThreadData, ProdigalRelease
 APP_NAME = 'GeneQuery'
 
 # list of tool calls
-TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal']
+TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal', 'rast']
 
 # mappings of tool names to appropriate methods
 # [queryMethod, parseMethod]
@@ -38,7 +38,9 @@ TOOL_METHODS = {'gm': [Gene.GeneFile.genemark_query,
                 'glimmer': [Gene.GeneFile.glimmer_query,
                             Gene.GeneParse.parse_glimmer],
                 'prodigal': [Gene.GeneFile.prodigal_query,
-                             Gene.GeneParse.parse_prodigal]}
+                             Gene.GeneParse.parse_prodigal],
+                'rast': [Gene.GeneFile.rastQuery,
+                         Gene.GeneParse.parse_rast]}
 
 
 class ColorTable(QWidget):
