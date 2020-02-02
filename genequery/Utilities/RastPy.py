@@ -104,7 +104,8 @@ class Rast:
         """
         _RETRIEVE_FUNCTION = 'retrieve_RAST_job'
 
-        args = yaml.dump({'-format': 'gff3_stripped', '-job': self.jobId})
+        args = yaml.dump({'-format': 'gff3_stripped', '-job': self.jobId},
+                         Dumper=yaml.RoundTripDumper)
         payload = {'function': _RETRIEVE_FUNCTION,
                    'username': self.username,
                    'password': self.password,
@@ -138,10 +139,12 @@ class Rast:
 
 if __name__ == '__main__':
     rast = Rast('mlazeroff', 'chester')
-    rast.submit("D:\mdlaz\Documents\College\Research\programs\GeneQuery\\tests\sequences\Ronan.fasta",
-                'ROONAN')
-    time.sleep(.5)
-    rast.deleteJob()
+    # rast.submit("D:\mdlaz\Documents\College\Research\programs\GeneQuery\\tests\sequences\Ronan.fasta",
+    #             'ROONAN')
+    # time.sleep(.5)
+    # rast.deleteJob()
+    rast.jobId = 822853
+    print(rast.retrieveData())
 
 
 

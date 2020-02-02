@@ -1050,16 +1050,12 @@ def excel_write(output_directory, files, sequence):
 
 
 if __name__ == '__main__':
-    # file = 'D:\mdlaz\Documents\College\Research\programs\GeneQuery\\tests\sequences\Ronan.fasta'
-    # for seq in SeqIO.parse(file, 'fasta'):
-    #     Dissequence = seq
-    # gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
-    # gfile.rastQuery(username='mlazeroff',
-    #                 password='chester')
-    # data = gfile.query_data['hmm']
-    # myGenes = GeneParse.parse_genemarkHmm(data)
-    # print(GeneUtils.findMostGeneOccurrences(myGenes[13]))
-    gff3_file = 'D:\mdlaz\Documents\College\Research\programs\GeneQuery\\tests\sequences\jung.gff3'
-    with open(gff3_file) as file:
-        content = file.read()
-    GeneParse.parse_rast(content)
+    file = 'D:\mdlaz\Documents\College\Research\programs\GeneQuery\\tests\sequences\Ronan.fasta'
+    for seq in SeqIO.parse(file, 'fasta'):
+        Dissequence = seq
+    gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
+    gfile.rastQuery(username='mlazeroff',
+                    password='chester')
+    data = gfile.query_data['rast']
+
+

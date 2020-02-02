@@ -347,6 +347,8 @@ class NewFileDialog(QDialog):
     """
 
     _LAST_FASTA_FILE_LOCATION_SETTING = 'NEW_FILE_DIALOG/last_fasta_location'
+    _RAST_USERNAME_SETTING = 'NEW_FILE_DIALOG/rast_username'
+    _RAST_PASSWORD_SETTING = 'NEW_FILE_DIALOG/rast_password'
 
     def __init__(self, queryData, settings, prodigalPath=None, parent=None):
         """
@@ -392,6 +394,11 @@ class NewFileDialog(QDialog):
         prodigalLabel.setFont(labelFont)
         prodigalBox = QCheckBox('Prodigal')
 
+        # rast box
+        rastLabel = QLabel('RAST')
+        rastLabel.setFont(labelFont)
+        rastBox = QCheckBox('RAST')
+
         # dictionary mapping tools to checkboxes
         self.toolCheckBoxes = dict()
         self.toolCheckBoxes['gm'] = gmBox
@@ -401,6 +408,7 @@ class NewFileDialog(QDialog):
         self.toolCheckBoxes['gms2'] = gms2Box
         self.toolCheckBoxes['glimmer'] = glimmerBox
         self.toolCheckBoxes['prodigal'] = prodigalBox
+        self.toolCheckBoxes['rast'] = rastBox
         for box in self.toolCheckBoxes.values():
             # set all boxes to default to being checked
             # box.setChecked(True)
@@ -447,6 +455,9 @@ class NewFileDialog(QDialog):
         # prodigal
         checkBoxLayout.addWidget(prodigalLabel, 3, 1)
         checkBoxLayout.addWidget(prodigalBox, 4, 1)
+        # rast
+        checkBoxLayout.addWidget(rastLabel, 3, 2)
+        checkBoxLayout.addWidget(rastBox, 4, 2)
 
         # species
         speciesLayout.addWidget(speciesLabel)
