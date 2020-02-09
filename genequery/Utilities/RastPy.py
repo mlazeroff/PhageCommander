@@ -1,9 +1,10 @@
 import os
 import time
 import requests
+from bs4 import BeautifulSoup
 from ruamel import yaml
 
-RAST_URL = 'http://pubseed.theseed.org/rast/server.cgi'
+RAST_URL = 'https://pubseed.theseed.org/rast/server.cgi'
 
 
 class RastException(Exception):
@@ -25,6 +26,27 @@ class Rast:
         self.file = None
         self.jobId = None
         self.status = None
+
+    def _checkAuthentication(self):
+        """
+        Check to see if given credentials are valid
+        :return: True/False
+        """
+        _LOGIN_URL = 'https://rast.nmpdr.org/rast.cgi'
+        args = {'page': 'Home',
+                'login': self.username,
+                'password': self.password,
+                'action': 'perform_login'}
+        checkReq = requests.post(_LOGIN_URL, data=args)
+        checkReq.raise_for_status()
+
+        # check for status of login - can be derived from <title> tag
+        soup = BeautifulSoup(checkReq.content, 'html.parser')
+        titleTagText = soup.find('title').text
+        if 'Jobs Overview' in titleTagText:
+            return True
+        else:
+            return False
 
     def submit(self, filePath: str, sequenceName: str):
         """
@@ -138,14 +160,5 @@ class Rast:
 
 
 if __name__ == '__main__':
-    rast = Rast('mlazeroff', 'chester')
-    # rast.submit("D:\mdlaz\Documents\College\Research\programs\GeneQuery\\tests\sequences\Ronan.fasta",
-    #             'ROONAN')
-    # time.sleep(.5)
-    # rast.deleteJob()
-    rast.jobId = 822853
-    print(rast.retrieveData())
-
-
-
-
+    rast = Rast('mlazeroff', 'paul')
+    print(rast._checkAuthentication())
