@@ -27,6 +27,10 @@ class Rast:
         self.jobId = None
         self.status = None
 
+        # authenticate user
+        if not self._checkAuthentication():
+            raise RastException('Invalid User Credentials')
+
     def _checkAuthentication(self):
         """
         Check to see if given credentials are valid
@@ -161,4 +165,3 @@ class Rast:
 
 if __name__ == '__main__':
     rast = Rast('mlazeroff', 'paul')
-    print(rast._checkAuthentication())
