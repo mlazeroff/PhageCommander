@@ -40,8 +40,8 @@ TOOL_METHODS = {'gm': [Gene.GeneFile.genemark_query,
                             Gene.GeneParse.parse_glimmer],
                 'prodigal': [Gene.GeneFile.prodigal_query,
                              Gene.GeneParse.parse_prodigal],
-                RAST : [Gene.GeneFile.rastQuery,
-                         Gene.GeneParse.parse_rast]}
+                RAST: [Gene.GeneFile.rastQuery,
+                       Gene.GeneParse.parse_rast]}
 
 
 class ColorTable(QWidget):

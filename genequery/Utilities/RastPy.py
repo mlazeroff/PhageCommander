@@ -16,7 +16,7 @@ class Rast:
     Class for representing queries to RAST annotation servers
     """
 
-    def __init__(self, username: str, password: str):
+    def __init__(self, username: str, password: str, jobId: int = None):
         """
         :param username:
         :param password:
@@ -24,7 +24,7 @@ class Rast:
         self.username = username
         self.password = password
         self.file = None
-        self.jobId = None
+        self.jobId = jobId
         self.status = None
 
         # authenticate user
@@ -164,4 +164,4 @@ class Rast:
 
 
 if __name__ == '__main__':
-    rast = Rast('mlazeroff', 'paul')
+    rast = Rast('mlazeroff', 'chester', jobId=822853)
