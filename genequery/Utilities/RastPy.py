@@ -31,6 +31,10 @@ class Rast:
         if not self._checkAuthentication():
             raise RastException('Invalid User Credentials')
 
+        # check for status of job if given
+        if self.jobId is not None:
+            self.checkIfComplete()
+
     def _checkAuthentication(self):
         """
         Check to see if given credentials are valid
@@ -109,6 +113,9 @@ class Rast:
         _SUCCESS_FIELD = 'status'
         _SUCCESSFUL_STATUS = 'complete'
         _CHECK_STATUS_FUNCTION = 'status_of_RAST_job'
+        _ERROR_MSG_FIELD = 'error_msg'
+        _ERROR_STATUS = 'error'
+        _INVALID_JOB_ID_MSG = 'Access denied'
 
         args = '---\n-job:\n  - {}\n'.format(self.jobId)
         payload = {'function': _CHECK_STATUS_FUNCTION,
@@ -121,6 +128,12 @@ class Rast:
         statusContent = yaml.safe_load(statusReq.text)
         jobStatus = statusContent[self.jobId][_SUCCESS_FIELD]
         self.status = jobStatus
+
+        # raise exception for invalid jobID
+        if self.status == _ERROR_STATUS:
+            if statusContent[self.jobId][_ERROR_MSG_FIELD] == _INVALID_JOB_ID_MSG:
+                raise RastException('Invalid JobID: {}'.format(self.jobId))
+
         return True if jobStatus == _SUCCESSFUL_STATUS else False
 
     def retrieveData(self):
@@ -164,4 +177,5 @@ class Rast:
 
 
 if __name__ == '__main__':
-    rast = Rast('mlazeroff', 'chester', jobId=822853)
+    rast = Rast('mlazeroff', 'yelp', jobId=1)
+    print(rast.checkIfComplete())
