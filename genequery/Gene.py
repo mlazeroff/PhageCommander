@@ -331,30 +331,30 @@ class GeneFile:
 
         self.query_data['prodigal'] = stdout.decode('utf-8')
 
-    def rastQuery(self, username, password):
+    def rastQuery(self, username, password, jobId: int = None):
         """
         Submit the fasta file to RAST servers for submission
         :param username: RAST username
         :param password: RAST password
+        :param jobId: RAST jobID
         :return:
         """
-        # TODO: Uncomment once GUI is complete
-        # # create RAST object
-        # rastJob = RastPy.Rast(username, password)
-        #
-        # # submit
-        # rastJob.submit(self.full, self.name)
-        #
-        # # check periodically for job completion
-        # RAST_COMPLETION_CHECK_DELAY = 15
-        # time.sleep(RAST_COMPLETION_CHECK_DELAY)
-        # while not rastJob.checkIfComplete():
-        #     time.sleep(RAST_COMPLETION_CHECK_DELAY)
+        # create RAST object
+        rastJob = RastPy.Rast(username, password, jobId=jobId)
+
+        # if a jobID was given, check if it is complete
+        if jobId is None or not rastJob.checkIfComplete():
+            # submit
+            rastJob.submit(self.full, self.name)
+
+            # check periodically for job completion
+            RAST_COMPLETION_CHECK_DELAY = 15
+            time.sleep(RAST_COMPLETION_CHECK_DELAY)
+            while not rastJob.checkIfComplete():
+                time.sleep(RAST_COMPLETION_CHECK_DELAY)
 
         # job is complete - retrieve gene annotation
-        with open('../tests/sequences/ronan.gff3') as file:
-            self.query_data['rast'] = file.read()
-        # self.query_data['rast'] = rastJob.retrieveData()
+        self.query_data['rast'] = rastJob.retrieveData()
 
 
 class GeneError(Error):

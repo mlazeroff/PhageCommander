@@ -69,7 +69,7 @@ class RastJobDialog(QDialog):
         userInput = self.userLineEdit.text()
         passInput = self.passwordLineEdit.text()
         jobInput = self.jobLineEdit.text()
-        jobInput = jobInput if jobInput != '' else None
+        jobInput = int(jobInput) if jobInput != '' else None
         badCreds = False
         if userInput == '':
             self.userLineEdit.setStyleSheet(self._INVALID_INPUT_BORDER)
@@ -87,6 +87,8 @@ class RastJobDialog(QDialog):
             QMessageBox.critical(self, 'Invalid Credentials', 'Invalid credentials. Check username and password.')
         except RastPy.RastInvalidJobError:
             QMessageBox.critical(self, 'Invalid JobID', 'Given JobID "{}" is not valid.'.format(jobInput))
+        except Exception as e:
+            pass
 
         # creds and jobID at this point are valid, return values
         self.queryData.rastUser = userInput
@@ -118,6 +120,3 @@ if __name__ == '__main__':
     window = RastJobDialog(data)
     window.show()
     app.exec_()
-    print(data.rastUser)
-    print(data.rastPass)
-    print(data.rastJobID)

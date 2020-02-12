@@ -127,6 +127,9 @@ class Rast:
         _ERROR_STATUS = 'error'
         _INVALID_JOB_ID_MSG = 'Access denied'
 
+        if self.jobId is None:
+            return False
+
         args = '---\n-job:\n  - {}\n'.format(self.jobId)
         payload = {'function': _CHECK_STATUS_FUNCTION,
                    'username': self.username,
@@ -187,5 +190,5 @@ class Rast:
 
 
 if __name__ == '__main__':
-    rast = Rast('mlazeroff', 'yelp', jobId=1)
+    rast = Rast('mlazeroff', 'chester', 822395)
     print(rast.checkIfComplete())

@@ -520,10 +520,11 @@ class NewFileDialog(QDialog):
             return
 
         # if RAST was selected, prompt credential window
-        credDialog = genequery.GuiWidgets.RastJobDialog(self, self.queryData)
-        # if user exits window without submitting, do not query
-        if not credDialog.exec_():
-            return
+        if self.toolCheckBoxes['rast'].isChecked():
+            credDialog = genequery.GuiWidgets.RastJobDialog(self.queryData)
+            # if user exits window without submitting, do not query
+            if not credDialog.exec_():
+                return
 
         # update return values
         self.queryData.fileName = self.fileEdit.text()
@@ -614,9 +615,10 @@ class QueryThread(QThread):
         # if query is unsuccessful, return the error instead
         try:
             if self.tool == RAST:
-                username = self.settings.value(NewFileDialog._RAST_USERNAME_SETTING)
-                password = self.settings.value(NewFileDialog._RAST_PASSWORD_SETTING)
-                queryMethod(self.geneFile, username, password)
+                username = self.queryData.rastUser
+                password = self.queryData.rastPass
+                jobID = self.queryData.rastJobID
+                queryMethod(self.geneFile, username, password, jobId=jobID)
             else:
                 queryMethod(self.geneFile)
         except Exception as e:
