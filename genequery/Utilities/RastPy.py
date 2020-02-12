@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from ruamel import yaml
 
 RAST_URL = 'https://pubseed.theseed.org/rast/server.cgi'
-
+RAST_USER_URL = 'https://rast.nmpdr.org/rast.cgi'
 
 class RastException(Exception):
     pass

@@ -44,6 +44,7 @@ class RastJobDialog(QDialog):
         enterButton.setDefault(True)
         enterButton.clicked.connect(self.onEnter)
         viewJobsButton = QPushButton('View Jobs')
+        viewJobsButton.clicked.connect(self.onViewJobs)
 
         mainLayout.addWidget(userLabel, 0, 0)
         mainLayout.addWidget(self.userLineEdit, 0, 1)
@@ -96,6 +97,14 @@ class RastJobDialog(QDialog):
         self.queryData.rastJobID = jobInput
 
         QDialog.accept(self)
+
+    @pyqtSlot()
+    def onViewJobs(self):
+        """
+        Slot when "View Jobs" is clicked
+        """
+        # open up browser to RAST login
+        webbrowser.open(RastPy.RAST_USER_URL)
 
     @pyqtSlot()
     def onUserLineEdit(self):
