@@ -17,6 +17,7 @@ import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from PyQt5.QtCore import QSettings
+from genequery.Utilities import RastPy
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.gatech.edu/GeneMark/'
@@ -33,7 +34,7 @@ with open(species_file, 'r') as file:
     SPECIES = [specie.strip() for specie in file]
 
 # tools
-TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer']
+TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer', 'rast']
 
 
 class Error(Exception):
@@ -317,7 +318,6 @@ class GeneFile:
         Calls prodigal to analyze file
         """
         # # get path for prodigal exe
-        # exe_location = os.path.join(os.path.dirname(__file__), 'prodigal.windows.exe')
 
         # generate prodigal command and run
         cmd = '\"{}\" -i \"{}\" -p meta'.format(self.prodigalLocation, self.full)
@@ -330,6 +330,31 @@ class GeneFile:
             raise GeneFile.GeneFileError("Prodigal")
 
         self.query_data['prodigal'] = stdout.decode('utf-8')
+
+    def rastQuery(self, username, password, jobId: int = None):
+        """
+        Submit the fasta file to RAST servers for submission
+        :param username: RAST username
+        :param password: RAST password
+        :param jobId: RAST jobID
+        :return:
+        """
+        # create RAST object
+        rastJob = RastPy.Rast(username, password, jobId=jobId)
+
+        # if a jobID was given, check if it is complete
+        if jobId is None or not rastJob.checkIfComplete():
+            # submit
+            rastJob.submit(self.full, self.name)
+
+            # check periodically for job completion
+            RAST_COMPLETION_CHECK_DELAY = 15
+            time.sleep(RAST_COMPLETION_CHECK_DELAY)
+            while not rastJob.checkIfComplete():
+                time.sleep(RAST_COMPLETION_CHECK_DELAY)
+
+        # job is complete - retrieve gene annotation
+        self.query_data['rast'] = rastJob.retrieveData()
 
 
 class GeneError(Error):
@@ -353,19 +378,19 @@ class Gene:
         # check for "<3" or ">3" style starts, stops
         if '<' in start:
             start = start.split('<')[-1]
-            self.start = int(start) - 1
+            self.start = int(start)
         elif '&lt;' in start:
             start = start.split('&lt;')[-1]
-            self.start = int(start) - 1
+            self.start = int(start)
         else:
             self.start = int(start)
 
         if '>' in stop:
             stop = stop.split('>')[-1]
-            self.stop = int(stop) + 1
+            self.stop = int(stop)
         elif '&gt;' in stop:
             stop = stop.split('&gt;')[-1]
-            self.stop = int(stop) + 1
+            self.stop = int(stop)
         else:
             self.stop = int(stop)
 
@@ -828,6 +853,26 @@ class GeneParse:
 
         return genes
 
+    @staticmethod
+    def parse_rast(rast_data, identity=''):
+        """
+        Parse the gff3 formatted data for genes
+        :param rast_data: gff3 formatted gene annotations
+        :param identity: optional identity for genes
+        :return: List[Gene]
+        """
+        # find non comment lines
+        genes = []
+        for line in rast_data.splitlines():
+            if 'CDS' in line:
+                data = line.split('\t')
+                start = data[3]
+                stop = data[4]
+                direction = data[6]
+                genes.append(Gene(start, stop, direction, identity))
+
+        return genes
+
 
 def write_gene(gene, row, ws, indexes):
     """
@@ -1008,11 +1053,12 @@ def excel_write(output_directory, files, sequence):
 
 
 if __name__ == '__main__':
-    file = "D:\\mdlaz\\Documents\\college\\Research\\programs\\GeneQuery\\tests\\fasta_files\\Harrison rearranged.fasta"
+    file = 'D:\mdlaz\Documents\College\Research\programs\GeneQuery\\tests\sequences\Ronan.fasta'
     for seq in SeqIO.parse(file, 'fasta'):
         Dissequence = seq
     gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
-    gfile.genemarkhmm_query()
-    data = gfile.query_data['hmm']
-    myGenes = GeneParse.parse_genemarkHmm(data)
-    print(GeneUtils.findMostGeneOccurrences(myGenes[13]))
+    gfile.rastQuery(username='mlazeroff',
+                    password='chester')
+    data = gfile.query_data['rast']
+
+
