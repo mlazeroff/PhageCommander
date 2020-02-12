@@ -11,6 +11,14 @@ class RastException(Exception):
     pass
 
 
+class RastInvalidJobError(Exception):
+    pass
+
+
+class RastInvalidCredentialError(Exception):
+    pass
+
+
 class Rast:
     """
     Class for representing queries to RAST annotation servers
@@ -18,6 +26,7 @@ class Rast:
 
     def __init__(self, username: str, password: str, jobId: int = None):
         """
+        Exception raised for bad authentication
         :param username:
         :param password:
         """
@@ -29,7 +38,7 @@ class Rast:
 
         # authenticate user
         if not self._checkAuthentication():
-            raise RastException('Invalid User Credentials')
+            raise RastInvalidCredentialError('Invalid Credentials')
 
         # check for status of job if given
         if self.jobId is not None:
@@ -108,6 +117,7 @@ class Rast:
     def checkIfComplete(self):
         """
         Checks if the current job is complete
+        Exception raised for invalid IDs
         :return: True/False
         """
         _SUCCESS_FIELD = 'status'
@@ -132,7 +142,7 @@ class Rast:
         # raise exception for invalid jobID
         if self.status == _ERROR_STATUS:
             if statusContent[self.jobId][_ERROR_MSG_FIELD] == _INVALID_JOB_ID_MSG:
-                raise RastException('Invalid JobID: {}'.format(self.jobId))
+                raise RastInvalidJobError('Invalid JobID: {}'.format(self.jobId))
 
         return True if jobStatus == _SUCCESSFUL_STATUS else False
 

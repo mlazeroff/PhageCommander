@@ -339,6 +339,10 @@ class QueryData:
         self.toolData = dict()
         # sequence
         self.sequence = ''
+        # RAST related information
+        self.rastUser = ''
+        self.rastPass = ''
+        self.rastJobID = None
 
 
 class NewFileDialog(QDialog):
@@ -513,6 +517,12 @@ class NewFileDialog(QDialog):
         if not os.path.isfile(self.fileEdit.text()):
             QMessageBox.warning(self, 'File Does not Exist',
                                 'Selected DNA file does not exist.')
+            return
+
+        # if RAST was selected, prompt credential window
+        credDialog = genequery.GuiWidgets.RastJobDialog(self, self.queryData)
+        # if user exits window without submitting, do not query
+        if not credDialog.exec_():
             return
 
         # update return values

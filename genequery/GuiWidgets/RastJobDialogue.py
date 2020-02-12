@@ -7,26 +7,37 @@ from genequery.Utilities import RastPy
 
 class RastJobDialog(QDialog):
     _INVALID_INPUT_BORDER = 'border: 1px solid red'
+    _DEFAULT_STYLE_SHEET = ''
 
-    def __init__(self, parent=None):
+    def __init__(self, queryData, parent=None):
         super(RastJobDialog, self).__init__(parent)
 
         mainLayout = QGridLayout()
+        self.queryData = queryData
 
         # WIDGETS -----------------------------------------------------------------------
         # user widgets
         userLabel = QLabel('Username')
         self.userLineEdit = QLineEdit()
+        self.userLineEdit.textEdited.connect(self.onUserLineEdit)
 
         # password widgets
         passwordLabel = QLabel('Password')
         self.passwordLineEdit = QLineEdit()
+        self.passwordLineEdit.textEdited.connect(self.onPassLineEdit)
         self.passwordLineEdit.setEchoMode(QLineEdit.Password)
 
         # option JobID widgets
         jobLabel = QLabel('JobID')
         self.jobLineEdit = QLineEdit()
-        self.jobLineEdit.setPlaceholderText('OPTIONAL - Leave Blank for New Job')
+        jobLineEditText = 'OPTIONAL - Leave Blank for New Job '
+        self.jobLineEdit.setPlaceholderText(jobLineEditText)
+        # set width according to size of line edit placeholder text
+        font = QFont()
+        metric = QFontMetrics(font)
+        self.jobLineEdit.setMinimumWidth(metric.width(jobLineEditText) + 6)
+        # jobs are only integers
+        self.jobLineEdit.setValidator(QIntValidator(0, 100000000))
 
         # buttons
         enterButton = QPushButton('Enter')
@@ -45,6 +56,10 @@ class RastJobDialog(QDialog):
 
         self.setLayout(mainLayout)
 
+        # WINDOW --------------------------------------------------------------
+        self.setWindowTitle('RAST Credentials')
+        self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.MSWindowsFixedSizeDialogHint)
+
     @pyqtSlot()
     def onEnter(self):
         """
@@ -53,14 +68,56 @@ class RastJobDialog(QDialog):
         # perform check that username and password were entered
         userInput = self.userLineEdit.text()
         passInput = self.passwordLineEdit.text()
+        jobInput = self.jobLineEdit.text()
+        jobInput = jobInput if jobInput != '' else None
+        badCreds = False
         if userInput == '':
             self.userLineEdit.setStyleSheet(self._INVALID_INPUT_BORDER)
+            badCreds = True
         if passInput == '':
             self.passwordLineEdit.setStyleSheet(self._INVALID_INPUT_BORDER)
+            badCreds = True
+        if badCreds:
+            return
+
+        # check that credentials are valid
+        try:
+            client = RastPy.Rast(userInput, passInput, jobId=jobInput)
+        except RastPy.RastInvalidCredentialError:
+            QMessageBox.critical(self, 'Invalid Credentials', 'Invalid credentials. Check username and password.')
+        except RastPy.RastInvalidJobError:
+            QMessageBox.critical(self, 'Invalid JobID', 'Given JobID "{}" is not valid.'.format(jobInput))
+
+        # creds and jobID at this point are valid, return values
+        self.queryData.rastUser = userInput
+        self.queryData.rastPass = passInput
+        self.queryData.rastJobID = jobInput
+
+        QDialog.accept(self)
+
+    @pyqtSlot()
+    def onUserLineEdit(self):
+        """
+        Slot when username line is edited
+        """
+        self.userLineEdit.setStyleSheet(self._DEFAULT_STYLE_SHEET)
+
+    @pyqtSlot()
+    def onPassLineEdit(self):
+        """
+        Slot when password line is edited
+        """
+        self.passwordLineEdit.setStyleSheet(self._DEFAULT_STYLE_SHEET)
 
 
 if __name__ == '__main__':
+    from genequery.gquery import QueryData
+
     app = QApplication([])
-    window = RastJobDialog()
+    data = QueryData()
+    window = RastJobDialog(data)
     window.show()
     app.exec_()
+    print(data.rastUser)
+    print(data.rastPass)
+    print(data.rastJobID)
