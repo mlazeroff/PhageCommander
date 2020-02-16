@@ -13,12 +13,11 @@ import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from typing import List, Callable
-from genequery import Gene
-import genequery.GuiWidgets
-from genequery.Utilities import ThreadData, ProdigalRelease
+from PhageCommander import Gene
+import PhageCommander.GuiWidgets
+from PhageCommander.Utilities import ThreadData, ProdigalRelease
 
-
-APP_NAME = 'GeneQuery'
+APP_NAME = 'Phage Commander'
 
 # list of tool calls
 RAST = 'rast'
@@ -296,6 +295,7 @@ class SettingsDialog(QDialog):
     """
     Dialog for Settings
     """
+
     def __init__(self, parent=None):
         super(SettingsDialog, self).__init__(parent)
         self.settings = QSettings(QSettings.IniFormat, QSettings.UserScope, APP_NAME, APP_NAME)
@@ -521,7 +521,7 @@ class NewFileDialog(QDialog):
 
         # if RAST was selected, prompt credential window
         if self.toolCheckBoxes['rast'].isChecked():
-            credDialog = genequery.GuiWidgets.RastJobDialog(self.queryData)
+            credDialog = PhageCommander.GuiWidgets.RastJobDialog(self.queryData)
             # if user exits window without submitting, do not query
             if not credDialog.exec_():
                 return
@@ -655,7 +655,8 @@ class QueryManager(QThread):
         self.settings = settings
 
         # create GeneFile
-        self.geneFile = Gene.GeneFile(self.queryData.fileName, self.queryData.species, self.settings.value(GeneMain._PRODIGAL_BINARY_LOCATION_SETTING))
+        self.geneFile = Gene.GeneFile(self.queryData.fileName, self.queryData.species,
+                                      self.settings.value(GeneMain._PRODIGAL_BINARY_LOCATION_SETTING))
 
         # load sequence
         # with open(self.queryData.fileName) as seqFile:
@@ -761,7 +762,7 @@ class QueryDialog(QDialog):
             QDialog.reject(self)
 
 
-class exportGenbankDialog(genequery.GuiWidgets.exportDialog):
+class exportGenbankDialog(PhageCommander.GuiWidgets.exportDialog):
     _LAST_GENBANK_LOCATION_SETTING = 'EXPORT_GENBANK_DIALOG/last_genbank_location'
 
     def __init__(self, queryData, settings, parent=None):
@@ -925,7 +926,7 @@ class GeneMain(QMainWindow):
 
         self.enableActions()
         # SETTINGS ---------------------------------------------------------------------------------
-        self.setWindowTitle('GeneQuery')
+        self.setWindowTitle(APP_NAME)
 
         # check for Prodigal binary
         self.checkProdigal()
@@ -1405,7 +1406,7 @@ class GeneMain(QMainWindow):
             # prompt to download prodigal
             # location to store binary is gquery's folder
             td = ThreadData(pathlib.Path(__file__).parent)
-            prodigalDownloadDig = genequery.GuiWidgets.ProdigalDownloadDialog(currRelease, td)
+            prodigalDownloadDig = PhageCommander.GuiWidgets.ProdigalDownloadDialog(currRelease, td)
             if prodigalDownloadDig.exec_():
                 self.settings.setValue(self._PRODIGAL_BINARY_LOCATION_SETTING, td.data)
             else:

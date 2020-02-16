@@ -17,7 +17,7 @@ import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from PyQt5.QtCore import QSettings
-from genequery.Utilities import RastPy
+from PhageCommander.Utilities import RastPy
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.gatech.edu/GeneMark/'
