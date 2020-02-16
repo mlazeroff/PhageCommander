@@ -2,7 +2,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 import webbrowser
-from genequery.Utilities import RastPy
+from PhageCommander.Utilities import RastPy
 
 
 class RastJobDialog(QDialog):
@@ -122,7 +122,7 @@ class RastJobDialog(QDialog):
 
 
 if __name__ == '__main__':
-    from genequery.gquery import QueryData
+    from PhageCommander.gquery import QueryData
 
     app = QApplication([])
     data = QueryData()

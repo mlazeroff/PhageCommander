@@ -2,7 +2,7 @@ import platform
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-from genequery.Utilities import ThreadData, ProdigalRelease
+from PhageCommander.Utilities import ThreadData, ProdigalRelease
 
 
 class ProdigalDownloadDialog(QDialog):
