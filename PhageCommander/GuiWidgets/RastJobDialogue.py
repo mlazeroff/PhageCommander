@@ -122,7 +122,7 @@ class RastJobDialog(QDialog):
 
 
 if __name__ == '__main__':
-    from PhageCommander.gquery import QueryData
+    from PhageCommander.phagecommander import QueryData
 
     app = QApplication([])
     data = QueryData()
