@@ -15,7 +15,7 @@ setuptools.setup(
                       'openpyxl',
                       'pyqt5',
                       'biopython'],
-    entry_points={'gui_scripts': 'PhageCommander = PhageCommander.gquery:main'},
+    entry_points={'gui_scripts': 'PhageCommander = PhageCommander.phagecommander:main'},
     classifiers=["Programming Language :: Python :: 3",
                  "License :: OSI Approved :: GPL-3",
                  "Operating System :: Windows",
