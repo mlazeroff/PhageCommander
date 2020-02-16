@@ -17,8 +17,7 @@ from genequery import Gene
 import genequery.GuiWidgets
 from genequery.Utilities import ThreadData, ProdigalRelease
 
-
-APP_NAME = 'GeneQuery'
+APP_NAME = 'Phage Commander'
 
 # list of tool calls
 RAST = 'rast'
@@ -296,6 +295,7 @@ class SettingsDialog(QDialog):
     """
     Dialog for Settings
     """
+
     def __init__(self, parent=None):
         super(SettingsDialog, self).__init__(parent)
         self.settings = QSettings(QSettings.IniFormat, QSettings.UserScope, APP_NAME, APP_NAME)
@@ -655,7 +655,8 @@ class QueryManager(QThread):
         self.settings = settings
 
         # create GeneFile
-        self.geneFile = Gene.GeneFile(self.queryData.fileName, self.queryData.species, self.settings.value(GeneMain._PRODIGAL_BINARY_LOCATION_SETTING))
+        self.geneFile = Gene.GeneFile(self.queryData.fileName, self.queryData.species,
+                                      self.settings.value(GeneMain._PRODIGAL_BINARY_LOCATION_SETTING))
 
         # load sequence
         # with open(self.queryData.fileName) as seqFile:
@@ -925,7 +926,7 @@ class GeneMain(QMainWindow):
 
         self.enableActions()
         # SETTINGS ---------------------------------------------------------------------------------
-        self.setWindowTitle('GeneQuery')
+        self.setWindowTitle(APP_NAME)
 
         # check for Prodigal binary
         self.checkProdigal()
