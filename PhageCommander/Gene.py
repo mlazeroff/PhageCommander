@@ -16,6 +16,8 @@ import Bio.SeqFeature
 import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
+from PyQt5.QtCore import QSettings
+from PhageCommander.Utilities import RastPy
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.gatech.edu/GeneMark/'
@@ -32,7 +34,7 @@ with open(species_file, 'r') as file:
     SPECIES = [specie.strip() for specie in file]
 
 # tools
-TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer']
+TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer', 'rast']
 
 
 class Error(Exception):
@@ -55,14 +57,11 @@ class GeneFile:
         def __init__(self, message):
             self.message = message
 
-    def __init__(self, sequence_file: str, species: str, prodigalPath: str = None):
+    def __init__(self, sequence_file, species, prodigalLocation=None):
         """
         Constructor
         Generates necessary parameters for post requests from DNA fasta file
-        :param sequence_file: fasta sequence file path
-        :param species: species of DNA sequence
-            * Can find candidates in genequery/species.txt
-        :param prodigalPath: path to Prodigal binary
+        :param sequence_file:
         """
         # Load DNA Sequence into memory
         input_file_data = b''
@@ -74,7 +73,6 @@ class GeneFile:
 
         # full path
         self.full = sequence_file
-
         # get base file name
         self.name = str(os.path.basename(sequence_file).split('.')[0])
 
@@ -90,8 +88,8 @@ class GeneFile:
         # dictionary for storing query outputs
         self.query_data = {tool: '' for tool in TOOLS}
 
-        # path for prodigal
-        self.prodigalPath = prodigalPath
+        # store prodigal location
+        self.prodigalLocation = prodigalLocation
 
     def glimmer_query(self):
         """
@@ -319,22 +317,44 @@ class GeneFile:
         """
         Calls prodigal to analyze file
         """
+        # # get path for prodigal exe
+
         # generate prodigal command and run
-        if self.prodigalPath is None:
-            raise GeneFile.GeneFileError('Prodigal binary path was not given')
-        elif not os.path.exists(self.prodigalPath):
-            raise GeneFile.GeneFileError('{} is not a valid path'.format(self.prodigalPath))
-        else:
-            cmd = '\"{}\" -i \"{}\" -p meta'.format(self.prodigalPath, self.full)
-            proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
-            stdout, stderr = proc.communicate()
+        cmd = '\"{}\" -i \"{}\" -p meta'.format(self.prodigalLocation, self.full)
+        proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+        stdout, stderr = proc.communicate()
 
-            # check for error, exit if so
-            if proc.returncode != 0:
-                print(stderr)
-                raise GeneFile.GeneFileError("Prodigal")
+        # check for error, exit if so
+        if proc.returncode != 0:
+            print(stderr)
+            raise GeneFile.GeneFileError("Prodigal")
 
-            self.query_data['prodigal'] = stdout.decode('utf-8')
+        self.query_data['prodigal'] = stdout.decode('utf-8')
+
+    def rastQuery(self, username, password, jobId: int = None):
+        """
+        Submit the fasta file to RAST servers for submission
+        :param username: RAST username
+        :param password: RAST password
+        :param jobId: RAST jobID
+        :return:
+        """
+        # create RAST object
+        rastJob = RastPy.Rast(username, password, jobId=jobId)
+
+        # if a jobID was given, check if it is complete
+        if jobId is None or not rastJob.checkIfComplete():
+            # submit
+            rastJob.submit(self.full, self.name)
+
+            # check periodically for job completion
+            RAST_COMPLETION_CHECK_DELAY = 15
+            time.sleep(RAST_COMPLETION_CHECK_DELAY)
+            while not rastJob.checkIfComplete():
+                time.sleep(RAST_COMPLETION_CHECK_DELAY)
+
+        # job is complete - retrieve gene annotation
+        self.query_data['rast'] = rastJob.retrieveData()
 
 
 class GeneError(Error):
@@ -347,16 +367,33 @@ class Gene:
     Class for representing a potential gene encoding
     """
 
-    def __init__(self, start, stop, direction, identity=''):
+    def __init__(self, start: str, stop: str, direction: str, identity=''):
         """
         Constructor
-        :param start:  start codon (int)
-        :param stop:   end codon (int)
+        :param start:  start codon (str)
+        :param stop:   end codon (str)
         :param direction: +/-
         :param identity: optional identifier
         """
-        self.start = int(start)
-        self.stop = int(stop)
+        # check for "<3" or ">3" style starts, stops
+        if '<' in start:
+            start = start.split('<')[-1]
+            self.start = int(start)
+        elif '&lt;' in start:
+            start = start.split('&lt;')[-1]
+            self.start = int(start)
+        else:
+            self.start = int(start)
+
+        if '>' in stop:
+            stop = stop.split('>')[-1]
+            self.stop = int(stop)
+        elif '&gt;' in stop:
+            stop = stop.split('&gt;')[-1]
+            self.stop = int(stop)
+        else:
+            self.stop = int(stop)
+
         self.identity = identity
         # check for proper direction
         try:
@@ -809,9 +846,30 @@ class GeneParse:
                         gene_str = gene_str[len('complement'):]
                         # remove ()
                         gene_str = gene_str[1:-1]
-                    start, end = [int(x) for x in gene_str.split('.') if x.isnumeric()]
+                    start, end = gene_str.split('..')
+                    # start, end = [int(x) for x in gene_str.split('.') if x.isnumeric()]
                     # create gene
                     genes.append(Gene(start, end, direction, identity=identity))
+
+        return genes
+
+    @staticmethod
+    def parse_rast(rast_data, identity=''):
+        """
+        Parse the gff3 formatted data for genes
+        :param rast_data: gff3 formatted gene annotations
+        :param identity: optional identity for genes
+        :return: List[Gene]
+        """
+        # find non comment lines
+        genes = []
+        for line in rast_data.splitlines():
+            if 'CDS' in line:
+                data = line.split('\t')
+                start = data[3]
+                stop = data[4]
+                direction = data[6]
+                genes.append(Gene(start, stop, direction, identity))
 
         return genes
 
@@ -995,11 +1053,12 @@ def excel_write(output_directory, files, sequence):
 
 
 if __name__ == '__main__':
-    file = "D:\\mdlaz\\Documents\\college\\Research\\programs\\GeneQuery\\tests\\fasta_files\\Harrison rearranged.fasta"
+    file = 'D:\mdlaz\Documents\College\Research\programs\GeneQuery\\tests\sequences\Ronan.fasta'
     for seq in SeqIO.parse(file, 'fasta'):
         Dissequence = seq
     gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
-    gfile.genemarkhmm_query()
-    data = gfile.query_data['hmm']
-    myGenes = GeneParse.parse_genemarkHmm(data)
-    print(GeneUtils.findMostGeneOccurrences(myGenes[13]))
+    gfile.rastQuery(username='mlazeroff',
+                    password='chester')
+    data = gfile.query_data['rast']
+
+

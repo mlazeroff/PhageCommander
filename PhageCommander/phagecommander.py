@@ -13,15 +13,15 @@ import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from typing import List, Callable
-from genequery import Gene
-import genequery.GuiWidgets
-from genequery.Utilities import ThreadData, ProdigalRelease
+from PhageCommander import Gene
+import PhageCommander.GuiWidgets
+from PhageCommander.Utilities import ThreadData, ProdigalRelease
 
-
-APP_NAME = 'GeneQuery'
+APP_NAME = 'Phage Commander'
 
 # list of tool calls
-TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal']
+RAST = 'rast'
+TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal', RAST]
 
 # mappings of tool names to appropriate methods
 # [queryMethod, parseMethod]
@@ -38,7 +38,9 @@ TOOL_METHODS = {'gm': [Gene.GeneFile.genemark_query,
                 'glimmer': [Gene.GeneFile.glimmer_query,
                             Gene.GeneParse.parse_glimmer],
                 'prodigal': [Gene.GeneFile.prodigal_query,
-                             Gene.GeneParse.parse_prodigal]}
+                             Gene.GeneParse.parse_prodigal],
+                RAST: [Gene.GeneFile.rastQuery,
+                       Gene.GeneParse.parse_rast]}
 
 
 class ColorTable(QWidget):
@@ -57,7 +59,8 @@ class ColorTable(QWidget):
         (146, 205, 220),
         (49, 134, 155),
         (33, 89, 103),
-        (21, 59, 68)
+        (21, 59, 68),
+        (2, 47, 58)
     ]
     _DEFAULT_MAJORITY_COLORS = [
         (0, 0, 0),
@@ -66,9 +69,11 @@ class ColorTable(QWidget):
         (0, 0, 0),
         (255, 255, 255),
         (255, 255, 255),
+        (255, 255, 255),
         (255, 255, 255)
     ]
     _DEFAULT_MINORITY_COLORS = [
+        (255, 75, 75),
         (255, 75, 75),
         (255, 75, 75),
         (255, 75, 75),
@@ -87,7 +92,7 @@ class ColorTable(QWidget):
         # WIDGETS ------------------------------------------------------------------------------------------------------
         # Color Selection Table
         self.tableWidget = QTableWidget()
-        self.tableWidget.setRowCount(7)
+        self.tableWidget.setRowCount(len(TOOL_NAMES))
         self.tableWidget.setColumnCount(len(self._TABLE_COLUMN_HEADERS))
         self.tableWidget.setHorizontalHeaderLabels(self._TABLE_COLUMN_HEADERS)
         self.tableWidget.horizontalHeader()
@@ -105,7 +110,7 @@ class ColorTable(QWidget):
 
         # insert items into table
         tableHeight = self.tableWidget.horizontalHeader().height()
-        for i in range(7):
+        for i in range(len(TOOL_NAMES)):
             self.tableWidget.setRowHeight(i, 20)
             tableHeight += self.tableWidget.rowHeight(i)
             item = QTableWidgetItem()
@@ -290,6 +295,7 @@ class SettingsDialog(QDialog):
     """
     Dialog for Settings
     """
+
     def __init__(self, parent=None):
         super(SettingsDialog, self).__init__(parent)
         self.settings = QSettings(QSettings.IniFormat, QSettings.UserScope, APP_NAME, APP_NAME)
@@ -333,6 +339,10 @@ class QueryData:
         self.toolData = dict()
         # sequence
         self.sequence = ''
+        # RAST related information
+        self.rastUser = ''
+        self.rastPass = ''
+        self.rastJobID = None
 
 
 class NewFileDialog(QDialog):
@@ -342,6 +352,8 @@ class NewFileDialog(QDialog):
     """
 
     _LAST_FASTA_FILE_LOCATION_SETTING = 'NEW_FILE_DIALOG/last_fasta_location'
+    _RAST_USERNAME_SETTING = 'NEW_FILE_DIALOG/rast_username'
+    _RAST_PASSWORD_SETTING = 'NEW_FILE_DIALOG/rast_password'
 
     def __init__(self, queryData, settings, prodigalPath=None, parent=None):
         """
@@ -387,6 +399,11 @@ class NewFileDialog(QDialog):
         prodigalLabel.setFont(labelFont)
         prodigalBox = QCheckBox('Prodigal')
 
+        # rast box
+        rastLabel = QLabel('RAST')
+        rastLabel.setFont(labelFont)
+        rastBox = QCheckBox('RAST')
+
         # dictionary mapping tools to checkboxes
         self.toolCheckBoxes = dict()
         self.toolCheckBoxes['gm'] = gmBox
@@ -396,6 +413,7 @@ class NewFileDialog(QDialog):
         self.toolCheckBoxes['gms2'] = gms2Box
         self.toolCheckBoxes['glimmer'] = glimmerBox
         self.toolCheckBoxes['prodigal'] = prodigalBox
+        self.toolCheckBoxes['rast'] = rastBox
         for box in self.toolCheckBoxes.values():
             # set all boxes to default to being checked
             # box.setChecked(True)
@@ -442,6 +460,9 @@ class NewFileDialog(QDialog):
         # prodigal
         checkBoxLayout.addWidget(prodigalLabel, 3, 1)
         checkBoxLayout.addWidget(prodigalBox, 4, 1)
+        # rast
+        checkBoxLayout.addWidget(rastLabel, 3, 2)
+        checkBoxLayout.addWidget(rastBox, 4, 2)
 
         # species
         speciesLayout.addWidget(speciesLabel)
@@ -497,6 +518,13 @@ class NewFileDialog(QDialog):
             QMessageBox.warning(self, 'File Does not Exist',
                                 'Selected DNA file does not exist.')
             return
+
+        # if RAST was selected, prompt credential window
+        if self.toolCheckBoxes['rast'].isChecked():
+            credDialog = PhageCommander.GuiWidgets.RastJobDialog(self.queryData)
+            # if user exits window without submitting, do not query
+            if not credDialog.exec_():
+                return
 
         # update return values
         self.queryData.fileName = self.fileEdit.text()
@@ -560,11 +588,12 @@ class QueryThread(QThread):
     Returns the list of Genes via reference
     """
 
-    def __init__(self, geneFile, tool, queryData):
+    def __init__(self, geneFile, tool, queryData, settings):
         """
         Constructor
         :param geneFile: GeneFile object of DNA file
         :param tool: tool to call
+        :param settings: QSettings
             * See TOOL_NAMES global
         """
         super(QueryThread, self).__init__()
@@ -572,6 +601,7 @@ class QueryThread(QThread):
         self.tool = tool
         self.queryData = queryData
         self.geneFile = geneFile
+        self.settings = settings
 
     def run(self):
         """
@@ -584,7 +614,13 @@ class QueryThread(QThread):
         # perform query
         # if query is unsuccessful, return the error instead
         try:
-            queryMethod(self.geneFile)
+            if self.tool == RAST:
+                username = self.queryData.rastUser
+                password = self.queryData.rastPass
+                jobID = self.queryData.rastJobID
+                queryMethod(self.geneFile, username, password, jobId=jobID)
+            else:
+                queryMethod(self.geneFile)
         except Exception as e:
             self.queryData.toolData[self.tool] = e
             return
@@ -607,7 +643,7 @@ class QueryManager(QThread):
     # signal emitted each time a querying thread returns
     progressSig = pyqtSignal()
 
-    def __init__(self, queryData: QueryData, settings: QSettings):
+    def __init__(self, queryData, settings):
         """
         Initializes and starts threads for each tool to be called
         :param queryData: QueryData object
@@ -616,10 +652,11 @@ class QueryManager(QThread):
 
         # VARIABLES --------------------------------------------------------------------------------
         self.queryData = queryData
+        self.settings = settings
 
         # create GeneFile
         self.geneFile = Gene.GeneFile(self.queryData.fileName, self.queryData.species,
-                                      settings.value(GeneMain.PRODIGAL_BINARY_LOCATION_SETTING))
+                                      self.settings.value(GeneMain._PRODIGAL_BINARY_LOCATION_SETTING))
 
         # load sequence
         # with open(self.queryData.fileName) as seqFile:
@@ -631,7 +668,7 @@ class QueryManager(QThread):
         self.threads = []
         for tool in self.queryData.tools:
             if self.queryData.tools[tool] is True:
-                self.threads.append(QueryThread(self.geneFile, tool, self.queryData))
+                self.threads.append(QueryThread(self.geneFile, tool, self.queryData, self.settings))
 
         for thread in self.threads:
             thread.finished.connect(self.queryReturn)
@@ -660,14 +697,15 @@ class QueryDialog(QDialog):
     Dialog for querying prediction tools
     """
 
-    def __init__(self, queryData: QueryData, settings: QSettings, parent=None):
+    def __init__(self, queryData, settings, parent=None):
         super(QueryDialog, self).__init__(parent)
 
         self.queryData = queryData
+        self.settings = settings
 
         mainLayout = QVBoxLayout()
         # WIDGETS ----------------------------------------------------------------------------------
-        self.thread = QueryManager(queryData, settings)
+        self.thread = QueryManager(queryData, self.settings)
         self.thread.finished.connect(self.queryStop)
         self.thread.progressSig.connect(self.updateProgress)
 
@@ -724,7 +762,7 @@ class QueryDialog(QDialog):
             QDialog.reject(self)
 
 
-class exportGenbankDialog(genequery.GuiWidgets.exportDialog):
+class exportGenbankDialog(PhageCommander.GuiWidgets.exportDialog):
     _LAST_GENBANK_LOCATION_SETTING = 'EXPORT_GENBANK_DIALOG/last_genbank_location'
 
     def __init__(self, queryData, settings, parent=None):
@@ -813,7 +851,7 @@ class GeneMain(QMainWindow):
     """
 
     _LAST_OPEN_FILE_LOCATION_SETTING = 'GENE_MAIN/last_open_file_location'
-    PRODIGAL_BINARY_LOCATION_SETTING = 'GENE_MAIN/prodigal_location'
+    _PRODIGAL_BINARY_LOCATION_SETTING = 'GENE_MAIN/prodigal_location'
 
     def __init__(self, parent=None):
         super(GeneMain, self).__init__(parent)
@@ -888,7 +926,7 @@ class GeneMain(QMainWindow):
 
         self.enableActions()
         # SETTINGS ---------------------------------------------------------------------------------
-        self.setWindowTitle('GeneQuery')
+        self.setWindowTitle(APP_NAME)
 
         # check for Prodigal binary
         self.checkProdigal()
@@ -906,7 +944,7 @@ class GeneMain(QMainWindow):
         # temporary data in case user quits the dialogs
         tmpQueryData = QueryData()
         # open query dialog
-        dialog = NewFileDialog(tmpQueryData, self.settings, self.settings.value(self.PRODIGAL_BINARY_LOCATION_SETTING))
+        dialog = NewFileDialog(tmpQueryData, self.settings, self.settings.value(self._PRODIGAL_BINARY_LOCATION_SETTING))
         # if user initiates a query
         if dialog.exec_():
             # query tools
@@ -1361,18 +1399,18 @@ class GeneMain(QMainWindow):
 
     def checkProdigal(self):
 
-        prodigalPath = self.settings.value(self.PRODIGAL_BINARY_LOCATION_SETTING)
+        prodigalPath = self.settings.value(self._PRODIGAL_BINARY_LOCATION_SETTING)
         # if binary does not exist or binary has disappeared, prompt to download
         if prodigalPath is None or not os.path.exists(prodigalPath):
             currRelease = ProdigalRelease()
             # prompt to download prodigal
             # location to store binary is gquery's folder
             td = ThreadData(pathlib.Path(__file__).parent)
-            prodigalDownloadDig = genequery.GuiWidgets.ProdigalDownloadDialog(currRelease, td)
+            prodigalDownloadDig = PhageCommander.GuiWidgets.ProdigalDownloadDialog(currRelease, td)
             if prodigalDownloadDig.exec_():
-                self.settings.setValue(self.PRODIGAL_BINARY_LOCATION_SETTING, td.data)
+                self.settings.setValue(self._PRODIGAL_BINARY_LOCATION_SETTING, td.data)
             else:
-                self.settings.setValue(self.PRODIGAL_BINARY_LOCATION_SETTING, None)
+                self.settings.setValue(self._PRODIGAL_BINARY_LOCATION_SETTING, None)
 
     def createAction(self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False,
                      signal='triggered()'):
