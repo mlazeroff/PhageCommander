@@ -22,6 +22,10 @@ Supported exporting formats:
 ### Prerequisites
 * Python 3.6+
 ### Installing
+Install via pip
+```angular2
+pip install phage-commander
+```
 Install via pip and git
 ```angular2html
 pip install git+https://github.com/mlazeroff/PhageCommander
