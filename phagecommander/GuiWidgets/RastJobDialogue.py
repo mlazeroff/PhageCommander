@@ -32,6 +32,7 @@ class RastJobDialog(QDialog):
         self.jobLineEdit = QLineEdit()
         jobLineEditText = 'OPTIONAL - Leave Blank for New Job '
         self.jobLineEdit.setPlaceholderText(jobLineEditText)
+        self.jobLineEdit.textEdited.connect(self.onJobLineEdit)
         # set width according to size of line edit placeholder text
         font = QFont()
         metric = QFontMetrics(font)
@@ -86,10 +87,14 @@ class RastJobDialog(QDialog):
             client = RastPy.Rast(userInput, passInput, jobId=jobInput)
         except RastPy.RastInvalidCredentialError:
             QMessageBox.critical(self, 'Invalid Credentials', 'Invalid credentials. Check username and password.')
+            return
         except RastPy.RastInvalidJobError:
             QMessageBox.critical(self, 'Invalid JobID', 'Given JobID "{}" is not valid.'.format(jobInput))
+            self.jobLineEdit.setStyleSheet(self._INVALID_INPUT_BORDER)
+            return
         except Exception as e:
-            pass
+            QMessageBox.critical(self, 'Unexpected Error', 'Error: {}'.format(e))
+            return
 
         # creds and jobID at this point are valid, return values
         self.queryData.rastUser = userInput
@@ -119,6 +124,13 @@ class RastJobDialog(QDialog):
         Slot when password line is edited
         """
         self.passwordLineEdit.setStyleSheet(self._DEFAULT_STYLE_SHEET)
+
+    @pyqtSlot()
+    def onJobLineEdit(self):
+        """
+        Slot when the jobID line is edited
+        """
+        self.jobLineEdit.setStyleSheet(self._DEFAULT_STYLE_SHEET)
 
 
 if __name__ == '__main__':
