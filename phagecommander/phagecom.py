@@ -1,21 +1,16 @@
 import os
 import pickle
 import pathlib
-from abc import abstractmethod
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill, colors
-import Bio.Seq
-import Bio.SeqFeature
-import Bio.SeqRecord
+from openpyxl.styles import Font, Alignment, PatternFill
 from Bio import SeqIO
-from Bio.Alphabet import IUPAC
-from typing import List, Callable
 from phagecommander import Gene
 import phagecommander.GuiWidgets
 from phagecommander.Utilities import ThreadData, ProdigalRelease
+from phagecommander.Utilities.QueryData import QueryData
 
 APP_NAME = 'Phage Commander'
 
@@ -325,30 +320,6 @@ class SettingsDialog(QDialog):
     def initTableTab(self):
         self.tableTab = ColorTable(self.settings)
         self.tabWidget.addTab(self.tableTab, 'Table')
-
-
-class QueryData:
-    """
-    Class for representing tool/species selections
-    """
-
-    def __init__(self):
-        # tools to call
-        self.tools = {key: True for key in TOOL_NAMES}
-        # species of the DNA sequence
-        self.species = ''
-        # path of the DNA file
-        self.fileName = ''
-        # tool data
-        # Key - tool (from TOOL_NAMES)
-        # Value - List of Genes
-        self.toolData = dict()
-        # sequence
-        self.sequence = ''
-        # RAST related information
-        self.rastUser = ''
-        self.rastPass = ''
-        self.rastJobID = None
 
 
 class NewFileDialog(QDialog):

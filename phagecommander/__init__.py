@@ -1,2 +1,2 @@
-from phagecommander import Gene
+from phagecommander import Gene, phagecom
 name = 'gene_query'
