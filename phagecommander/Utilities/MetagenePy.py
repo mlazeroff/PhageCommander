@@ -1,7 +1,7 @@
 import os
 import requests
 from bs4 import BeautifulSoup
-from PhageCommander import Gene
+from phagecommander import Gene
 
 METAGENE_URL = 'http://metagene.nig.ac.jp/cgi-bin/mga.cgi'
 
