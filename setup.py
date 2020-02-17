@@ -6,7 +6,7 @@ with open('README.md', 'r') as file:
 setuptools.setup(
     name='phage-commander',
     license='GPL-3',
-    version='0.4.1dev',
+    version='0.4.2dev',
     author='Matthew Lazeroff',
     author_email='lazeroff@unlv.nevada.edu',
     description='A graphical tool for predicting genes on phage DNA sequences',
