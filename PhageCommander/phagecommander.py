@@ -22,7 +22,7 @@ APP_NAME = 'Phage Commander'
 # list of tool calls
 RAST = 'rast'
 METAGENE = 'metagene'
-TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal', RAST]
+TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal', RAST, METAGENE]
 
 # mappings of tool names to appropriate methods
 # [queryMethod, parseMethod]
@@ -41,7 +41,9 @@ TOOL_METHODS = {'gm': [Gene.GeneFile.genemark_query,
                 'prodigal': [Gene.GeneFile.prodigal_query,
                              Gene.GeneParse.parse_prodigal],
                 RAST: [Gene.GeneFile.rastQuery,
-                       Gene.GeneParse.parse_rast]}
+                       Gene.GeneParse.parse_rast],
+                METAGENE: [Gene.GeneFile.metageneQuery,
+                           Gene.GeneParse.parse_metagene]}
 
 
 class ColorTable(QWidget):
@@ -61,6 +63,7 @@ class ColorTable(QWidget):
         (49, 134, 155),
         (33, 89, 103),
         (21, 59, 68),
+        (2, 47, 58),
         (2, 47, 58)
     ]
     _DEFAULT_MAJORITY_COLORS = [
@@ -71,9 +74,11 @@ class ColorTable(QWidget):
         (255, 255, 255),
         (255, 255, 255),
         (255, 255, 255),
+        (255, 255, 255),
         (255, 255, 255)
     ]
     _DEFAULT_MINORITY_COLORS = [
+        (255, 75, 75),
         (255, 75, 75),
         (255, 75, 75),
         (255, 75, 75),
