@@ -86,10 +86,13 @@ class RastJobDialog(QDialog):
             client = RastPy.Rast(userInput, passInput, jobId=jobInput)
         except RastPy.RastInvalidCredentialError:
             QMessageBox.critical(self, 'Invalid Credentials', 'Invalid credentials. Check username and password.')
+            return
         except RastPy.RastInvalidJobError:
             QMessageBox.critical(self, 'Invalid JobID', 'Given JobID "{}" is not valid.'.format(jobInput))
+            return
         except Exception as e:
-            pass
+            QMessageBox.critical(self, 'Unexpected Error', 'Error: {}'.format(e))
+            return
 
         # creds and jobID at this point are valid, return values
         self.queryData.rastUser = userInput

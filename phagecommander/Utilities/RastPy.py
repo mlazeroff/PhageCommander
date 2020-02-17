@@ -7,6 +7,7 @@ from ruamel import yaml
 RAST_URL = 'https://pubseed.theseed.org/rast/server.cgi'
 RAST_USER_URL = 'https://rast.nmpdr.org/rast.cgi'
 
+
 class RastException(Exception):
     pass
 
@@ -125,7 +126,8 @@ class Rast:
         _CHECK_STATUS_FUNCTION = 'status_of_RAST_job'
         _ERROR_MSG_FIELD = 'error_msg'
         _ERROR_STATUS = 'error'
-        _INVALID_JOB_ID_MSG = 'Access denied'
+        _ACCESS_DENIED_ERROR = 'Access denied'
+        _INVALID_JOB_ID = 'Job not found'
 
         if self.jobId is None:
             return False
@@ -144,7 +146,7 @@ class Rast:
 
         # raise exception for invalid jobID
         if self.status == _ERROR_STATUS:
-            if statusContent[self.jobId][_ERROR_MSG_FIELD] == _INVALID_JOB_ID_MSG:
+            if statusContent[self.jobId][_ERROR_MSG_FIELD] == _ACCESS_DENIED_ERROR or _INVALID_JOB_ID:
                 raise RastInvalidJobError('Invalid JobID: {}'.format(self.jobId))
 
         return True if jobStatus == _SUCCESSFUL_STATUS else False
@@ -190,5 +192,5 @@ class Rast:
 
 
 if __name__ == '__main__':
-    rast = Rast('mlazeroff', 'chester', 822395)
+    rast = Rast('mlazeroff', 'chester', 1)
     print(rast.checkIfComplete())
