@@ -15,13 +15,12 @@ class Metagene:
 
         self.file = file
         self.sequenceName = sequenceName
-        self.genes = []
 
     def query(self, identity: str = ''):
         files = {'File': (self.sequenceName, open(self.file), 'application/octet-stream')}
         postReq = requests.post(METAGENE_URL, files=files)
         postReq.raise_for_status()
-        self.genes = self.parse(postReq.text, identity=identity)
+        return postReq.text
 
     @staticmethod
     def parse(metageneData: str, identity: str = ''):
