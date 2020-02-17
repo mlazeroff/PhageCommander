@@ -25,3 +25,11 @@ class QueryData:
         self.rastUser = ''
         self.rastPass = ''
         self.rastJobID = None
+
+    def wipeUserCredentials(self):
+        """
+        Deletes any data relating to a RAST query
+        """
+        self.rastJobID = None
+        self.rastUser = None
+        self.rastPass = None
