@@ -13,9 +13,9 @@ import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from typing import List, Callable
-from PhageCommander import Gene
-import PhageCommander.GuiWidgets
-from PhageCommander.Utilities import ThreadData, ProdigalRelease
+from phagecommander import Gene
+import phagecommander.GuiWidgets
+from phagecommander.Utilities import ThreadData, ProdigalRelease
 
 APP_NAME = 'Phage Commander'
 
@@ -537,7 +537,7 @@ class NewFileDialog(QDialog):
 
         # if RAST was selected, prompt credential window
         if self.toolCheckBoxes['rast'].isChecked():
-            credDialog = PhageCommander.GuiWidgets.RastJobDialog(self.queryData)
+            credDialog = phagecommander.GuiWidgets.RastJobDialog(self.queryData)
             # if user exits window without submitting, do not query
             if not credDialog.exec_():
                 return
@@ -778,7 +778,7 @@ class QueryDialog(QDialog):
             QDialog.reject(self)
 
 
-class exportGenbankDialog(PhageCommander.GuiWidgets.exportDialog):
+class exportGenbankDialog(phagecommander.GuiWidgets.exportDialog):
     _LAST_GENBANK_LOCATION_SETTING = 'EXPORT_GENBANK_DIALOG/last_genbank_location'
 
     def __init__(self, queryData, settings, parent=None):
@@ -1422,7 +1422,7 @@ class GeneMain(QMainWindow):
             # prompt to download prodigal
             # location to store binary is gquery's folder
             td = ThreadData(pathlib.Path(__file__).parent)
-            prodigalDownloadDig = PhageCommander.GuiWidgets.ProdigalDownloadDialog(currRelease, td)
+            prodigalDownloadDig = phagecommander.GuiWidgets.ProdigalDownloadDialog(currRelease, td)
             if prodigalDownloadDig.exec_():
                 self.settings.setValue(self._PRODIGAL_BINARY_LOCATION_SETTING, td.data)
             else:
