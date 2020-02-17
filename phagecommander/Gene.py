@@ -5,6 +5,7 @@ Author: Matthew Lazeroff
 
 import requests
 from bs4 import BeautifulSoup
+import json
 import time
 import os
 from typing import Callable, List
@@ -17,7 +18,7 @@ import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from PyQt5.QtCore import QSettings
-from PhageCommander.Utilities import RastPy, MetagenePy
+from phagecommander.Utilities import RastPy, MetagenePy
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.gatech.edu/GeneMark/'
@@ -411,6 +412,16 @@ class Gene:
         except GeneError:
             raise
         self.length = self.stop - self.start + 1
+
+    def jsonDump(self):
+
+        data = {'start': self.start,
+                'stop': self.stop,
+                'direction': self.direction,
+                'length': self.length,
+                'identity': self.identity}
+
+        return data
 
     def __eq__(self, other):
         """

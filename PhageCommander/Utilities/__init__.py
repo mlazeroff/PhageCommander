@@ -1,3 +1,0 @@
-from PhageCommander.Utilities.ThreadData import ThreadData
-from PhageCommander.Utilities.ProdigalRelease import ProdigalRelease
-import PhageCommander.Utilities.RastPy

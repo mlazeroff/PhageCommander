@@ -1,21 +1,16 @@
 import os
 import pickle
 import pathlib
-from abc import abstractmethod
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill, colors
-import Bio.Seq
-import Bio.SeqFeature
-import Bio.SeqRecord
+from openpyxl.styles import Font, Alignment, PatternFill
 from Bio import SeqIO
-from Bio.Alphabet import IUPAC
-from typing import List, Callable
-from PhageCommander import Gene
-import PhageCommander.GuiWidgets
-from PhageCommander.Utilities import ThreadData, ProdigalRelease
+from phagecommander import Gene
+import phagecommander.GuiWidgets
+from phagecommander.Utilities import ThreadData, ProdigalRelease
+from phagecommander.Utilities.QueryData import QueryData
 
 APP_NAME = 'Phage Commander'
 
@@ -327,30 +322,6 @@ class SettingsDialog(QDialog):
         self.tabWidget.addTab(self.tableTab, 'Table')
 
 
-class QueryData:
-    """
-    Class for representing tool/species selections
-    """
-
-    def __init__(self):
-        # tools to call
-        self.tools = {key: True for key in TOOL_NAMES}
-        # species of the DNA sequence
-        self.species = ''
-        # path of the DNA file
-        self.fileName = ''
-        # tool data
-        # Key - tool (from TOOL_NAMES)
-        # Value - List of Genes
-        self.toolData = dict()
-        # sequence
-        self.sequence = ''
-        # RAST related information
-        self.rastUser = ''
-        self.rastPass = ''
-        self.rastJobID = None
-
-
 class NewFileDialog(QDialog):
     """
     Dialog shown when making a new query
@@ -537,7 +508,7 @@ class NewFileDialog(QDialog):
 
         # if RAST was selected, prompt credential window
         if self.toolCheckBoxes['rast'].isChecked():
-            credDialog = PhageCommander.GuiWidgets.RastJobDialog(self.queryData)
+            credDialog = phagecommander.GuiWidgets.RastJobDialog(self.queryData)
             # if user exits window without submitting, do not query
             if not credDialog.exec_():
                 return
@@ -778,7 +749,7 @@ class QueryDialog(QDialog):
             QDialog.reject(self)
 
 
-class exportGenbankDialog(PhageCommander.GuiWidgets.exportDialog):
+class exportGenbankDialog(phagecommander.GuiWidgets.exportDialog):
     _LAST_GENBANK_LOCATION_SETTING = 'EXPORT_GENBANK_DIALOG/last_genbank_location'
 
     def __init__(self, queryData, settings, parent=None):
@@ -1422,7 +1393,7 @@ class GeneMain(QMainWindow):
             # prompt to download prodigal
             # location to store binary is gquery's folder
             td = ThreadData(pathlib.Path(__file__).parent)
-            prodigalDownloadDig = PhageCommander.GuiWidgets.ProdigalDownloadDialog(currRelease, td)
+            prodigalDownloadDig = phagecommander.GuiWidgets.ProdigalDownloadDialog(currRelease, td)
             if prodigalDownloadDig.exec_():
                 self.settings.setValue(self._PRODIGAL_BINARY_LOCATION_SETTING, td.data)
             else:
