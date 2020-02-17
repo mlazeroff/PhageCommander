@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-    name='phagecommander',
+    name='phage-commander',
     license='GPL-3',
     version='0.1dev',
     author='Matthew Lazeroff',
