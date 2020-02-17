@@ -976,7 +976,7 @@ class GeneMain(QMainWindow):
                 # enable / disable actions
                 self.enableActions()
                 # update window title with temporary file name
-                self.setWindowTitle('GeneQuery - {}'.format('untitled*'))
+                self.setWindowTitle('{} - {}'.format(APP_NAME, 'untitled*'))
                 # display gene data
                 self.updateTable()
             # query was canceled by user - back to main window
@@ -1025,7 +1025,7 @@ class GeneMain(QMainWindow):
                     # save location
                     self.settings.setValue(self._LAST_OPEN_FILE_LOCATION_SETTING, os.path.split(openFileName[0])[0])
                     # change window titles
-                    self.setWindowTitle('GeneQuery - {}'.format(openFileName[0]))
+                    self.setWindowTitle('{} - {}'.format(APP_NAME, openFileName[0]))
                     # update table
                     self.updateTable()
 
@@ -1074,7 +1074,7 @@ class GeneMain(QMainWindow):
             # update file name
             # update window title
             baseFileName = os.path.split(self.queryData.fileName)[1]
-            self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
+            self.setWindowTitle('{} - {}'.format(APP_NAME, baseFileName))
             # allow normal saves
             # self.saveAction.setEnabled(True)
             self.saveEnabled = True
@@ -1167,7 +1167,7 @@ class GeneMain(QMainWindow):
         """
         if self.dirty:
             userReply = QMessageBox.question(self,
-                                             'GeneQuery - Unsaved Changes',
+                                             '{} - Unsaved Changes'.format(APP_NAME),
                                              'Save changes? - Data may be lost',
                                              QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
             # User cancels - return to main window
