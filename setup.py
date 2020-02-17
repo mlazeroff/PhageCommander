@@ -9,7 +9,7 @@ setuptools.setup(
     version='0.4.1dev',
     author='Matthew Lazeroff',
     author_email='lazeroff@unlv.nevada.edu',
-    description='Utilties for analyzing Fasta DNA Sequences with GeneMark/Glimmer',
+    description='A graphical tool for predicting genes on phage DNA sequences',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/mlazeroff/PhageCommander',
