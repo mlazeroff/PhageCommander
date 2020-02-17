@@ -16,7 +16,7 @@ class Metagene:
         self.file = file
         self.sequenceName = sequenceName
 
-    def query(self, identity: str = ''):
+    def query(self):
         files = {'File': (self.sequenceName, open(self.file), 'application/octet-stream')}
         postReq = requests.post(METAGENE_URL, files=files)
         postReq.raise_for_status()
