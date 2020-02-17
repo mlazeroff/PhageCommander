@@ -25,13 +25,3 @@ class QueryData:
         self.rastUser = ''
         self.rastPass = ''
         self.rastJobID = None
-
-    def json(self):
-
-        data = {'tools': self.tools,
-                'species': self.species,
-                'fileName': self.fileName,
-                'sequence': self.sequence,
-                'toolData': self.toolData}
-
-        return json.dumps(data)
