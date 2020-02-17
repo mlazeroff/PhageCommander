@@ -28,7 +28,7 @@ class Metagene:
         Parse Metagene output data for Genes
         :param metageneData: metagene output file content
         :param identity: identity for each gene
-        :return: [List:Gene]
+        :return: List[Gene]
         """
         # indices
         START = 1

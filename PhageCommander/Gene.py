@@ -880,6 +880,16 @@ class GeneParse:
 
         return genes
 
+    @staticmethod
+    def parse_metagene(metagene_data: str, identity: str = ''):
+        """
+        Parse a metagene output file for Genes
+        :param metagene_data: output of Metagene tool
+        :param identity: optional identity for gene
+        :return: List[Gene]
+        """
+        return MetagenePy.Metagene.parse(metagene_data, identity)
+
 
 def write_gene(gene, row, ws, indexes):
     """
@@ -1067,5 +1077,3 @@ if __name__ == '__main__':
     gfile.rastQuery(username='mlazeroff',
                     password='chester')
     data = gfile.query_data['rast']
-
-
