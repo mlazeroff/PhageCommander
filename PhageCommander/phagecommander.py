@@ -64,7 +64,7 @@ class ColorTable(QWidget):
         (33, 89, 103),
         (21, 59, 68),
         (2, 47, 58),
-        (2, 47, 58)
+        (1, 37, 56)
     ]
     _DEFAULT_MAJORITY_COLORS = [
         (0, 0, 0),
