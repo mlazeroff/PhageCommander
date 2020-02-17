@@ -21,6 +21,7 @@ APP_NAME = 'Phage Commander'
 
 # list of tool calls
 RAST = 'rast'
+METAGENE = 'metagene'
 TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal', RAST]
 
 # mappings of tool names to appropriate methods
@@ -404,6 +405,12 @@ class NewFileDialog(QDialog):
         rastLabel.setFont(labelFont)
         rastBox = QCheckBox('RAST')
 
+        # metagene box
+        METAGENE_LABEL_TEXT = 'Metagene'
+        metageneLabel = QLabel(METAGENE_LABEL_TEXT)
+        metageneLabel.setFont(labelFont)
+        metageneBox = QCheckBox(METAGENE_LABEL_TEXT)
+
         # dictionary mapping tools to checkboxes
         self.toolCheckBoxes = dict()
         self.toolCheckBoxes['gm'] = gmBox
@@ -414,6 +421,7 @@ class NewFileDialog(QDialog):
         self.toolCheckBoxes['glimmer'] = glimmerBox
         self.toolCheckBoxes['prodigal'] = prodigalBox
         self.toolCheckBoxes['rast'] = rastBox
+        self.toolCheckBoxes[METAGENE] = metageneBox
         for box in self.toolCheckBoxes.values():
             # set all boxes to default to being checked
             # box.setChecked(True)
@@ -463,6 +471,9 @@ class NewFileDialog(QDialog):
         # rast
         checkBoxLayout.addWidget(rastLabel, 3, 2)
         checkBoxLayout.addWidget(rastBox, 4, 2)
+        # metagene
+        checkBoxLayout.addWidget(metageneLabel, 5, 0)
+        checkBoxLayout.addWidget(metageneBox, 6, 0)
 
         # species
         speciesLayout.addWidget(speciesLabel)

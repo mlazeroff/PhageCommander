@@ -1,7 +1,7 @@
 import os
 import requests
 from bs4 import BeautifulSoup
-from PhageCommander.Gene import Gene
+from PhageCommander import Gene
 
 METAGENE_URL = 'http://metagene.nig.ac.jp/cgi-bin/mga.cgi'
 
@@ -47,6 +47,6 @@ class Metagene:
             stop = geneLine[STOP].text
             direction = geneLine[DIRECTION].text
             # create gene
-            genes.append(Gene(start, stop, direction, identity=identity))
+            genes.append(Gene.Gene(start, stop, direction, identity=identity))
 
         return genes
