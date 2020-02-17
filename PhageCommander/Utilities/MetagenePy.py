@@ -1,0 +1,53 @@
+import os
+import requests
+from bs4 import BeautifulSoup
+from PhageCommander.Gene import Gene
+
+METAGENE_URL = 'http://metagene.nig.ac.jp/cgi-bin/mga.cgi'
+
+
+class Metagene:
+
+    def __init__(self, file: str, sequenceName: str = None):
+        # check if file exists
+        if not os.path.exists(file):
+            raise FileExistsError('\"{}\" does not exist.'.format(file))
+
+        self.file = file
+        self.sequenceName = sequenceName
+        self.genes = []
+
+    def query(self, identity: str = ''):
+        files = {'File': (self.sequenceName, open(self.file), 'application/octet-stream')}
+        postReq = requests.post(METAGENE_URL, files=files)
+        postReq.raise_for_status()
+        self.genes = self.parse(postReq.text, identity=identity)
+
+    @staticmethod
+    def parse(metageneData: str, identity: str = ''):
+        """
+        Parse Metagene output data for Genes
+        :param metageneData: metagene output file content
+        :param identity: identity for each gene
+        :return: [List:Gene]
+        """
+        # indices
+        START = 1
+        STOP = 2
+        DIRECTION = 3
+
+        # parse html
+        soup = BeautifulSoup(metageneData, 'html.parser')
+        # find all genes
+        geneLines = soup.find_all('tr')
+        genes = []
+        for line in geneLines:
+            # split line content
+            geneLine = line.find_all('td')
+            start = geneLine[START].text
+            stop = geneLine[STOP].text
+            direction = geneLine[DIRECTION].text
+            # create gene
+            genes.append(Gene(start, stop, direction, identity=identity))
+
+        return genes
