@@ -19,8 +19,8 @@ setuptools.setup(
     entry_points={'gui_scripts': 'phagecom = phagecommander.phagecom:main'},
     classifiers=["Programming Language :: Python :: 3",
                  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-                 "Operating System :: Windows",
-                 "Operating System :: MacOS X",
-                 "Operating System :: Linux"],
+                 "Operating System :: Microsoft :: Windows",
+                 "Operating System :: MacOS",
+                 "Operating System :: Unix"],
     include_package_data=True,
 )
