@@ -3,7 +3,7 @@ import setuptools
 setuptools.setup(
     name='phage-commander',
     license='GPL-3',
-    version='0.1dev',
+    version='0.4dev',
     author='Matthew Lazeroff',
     author_email='lazeroff@unlv.nevada.edu',
     description='Utilties for analyzing Fasta DNA Sequences with GeneMark/Glimmer',
