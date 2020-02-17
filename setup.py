@@ -1,5 +1,8 @@
 import setuptools
 
+with open('README.md', 'r') as file:
+    long_description = file.read()
+
 setuptools.setup(
     name='phage-commander',
     license='GPL-3',
@@ -7,6 +10,8 @@ setuptools.setup(
     author='Matthew Lazeroff',
     author_email='lazeroff@unlv.nevada.edu',
     description='Utilties for analyzing Fasta DNA Sequences with GeneMark/Glimmer',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     url='https://github.com/mlazeroff/PhageCommander',
     packages=['phagecommander'],
     package_data={'phagecommander': ['species.txt', 'GuiWidgets/*', 'Utilities/*']},
