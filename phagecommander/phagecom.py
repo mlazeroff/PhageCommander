@@ -673,6 +673,10 @@ class QueryManager(QThread):
             if self.queryData.toolData[tool] is None:
                 return
 
+            # wipe user creds on RAST return
+            if self.queryData.toolData[RAST] is not None:
+                self.queryData.wipeUserCredentials()
+
         self.exit()
 
     def abort(self):
