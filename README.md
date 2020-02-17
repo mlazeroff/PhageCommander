@@ -1,34 +1,32 @@
-# GeneQuery
-Tool for compiling GeneMark/Glimmer data for a Fasta DNA sequence
+# Phage Commander 
+A graphical utility for querying various gene prediction tools for FASTA formatted DNA sequences.
 ## Overview
-GeneQuery takes a Fasta DNA sequence file, calls GeneMark/Glimmer gene-encoding prediction tools, and generates an Excel spreadsheet of all gene predictions. The Excel document is organized by color, with darker colors representing a greater number of tools predicting the same genes and lighter colors representing fewer tools.
+Phage Commander provides utilities to query various gene-encoding prediction tools and results in various formats.
 
-The following gene-encoding prediction tools are called:
+The following gene-encoding prediction tools are currently supported:
 * Glimmer
 * Genemark
 * Genemark Hmm
 * GenemarkS
 * GenemarkS2
 * Genemark Heuristic
+* Prodigal
+* RAST
+* Metagene
+
+Supported exporting formats:
+* Genbank
+* Excel
+
 ## Getting Started
 ### Prerequisites
-* Python 3.*
-* Windows (note - may work with other operating systems, but not guaranteed)
+* Python 3.6+
 ### Installing
 Install via pip and git
 ```angular2html
-pip install git+https://github.com/mlazeroff/GeneQuery
+pip install git+https://github.com/mlazeroff/PhageCommander
 ```
-## Using the tool
 
-### GUI Version
-Start via terminal
-```angular2html
->>> genequery
-```
-OR
-
-Start by double clicking the gene_query.pyw file
 ## Author
 * **Matthew Lazeroff**
 ## License

@@ -21,7 +21,8 @@ APP_NAME = 'Phage Commander'
 
 # list of tool calls
 RAST = 'rast'
-TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal', RAST]
+METAGENE = 'metagene'
+TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal', RAST, METAGENE]
 
 # mappings of tool names to appropriate methods
 # [queryMethod, parseMethod]
@@ -40,7 +41,9 @@ TOOL_METHODS = {'gm': [Gene.GeneFile.genemark_query,
                 'prodigal': [Gene.GeneFile.prodigal_query,
                              Gene.GeneParse.parse_prodigal],
                 RAST: [Gene.GeneFile.rastQuery,
-                       Gene.GeneParse.parse_rast]}
+                       Gene.GeneParse.parse_rast],
+                METAGENE: [Gene.GeneFile.metageneQuery,
+                           Gene.GeneParse.parse_metagene]}
 
 
 class ColorTable(QWidget):
@@ -60,7 +63,8 @@ class ColorTable(QWidget):
         (49, 134, 155),
         (33, 89, 103),
         (21, 59, 68),
-        (2, 47, 58)
+        (2, 47, 58),
+        (1, 37, 56)
     ]
     _DEFAULT_MAJORITY_COLORS = [
         (0, 0, 0),
@@ -70,9 +74,11 @@ class ColorTable(QWidget):
         (255, 255, 255),
         (255, 255, 255),
         (255, 255, 255),
+        (255, 255, 255),
         (255, 255, 255)
     ]
     _DEFAULT_MINORITY_COLORS = [
+        (255, 75, 75),
         (255, 75, 75),
         (255, 75, 75),
         (255, 75, 75),
@@ -404,6 +410,12 @@ class NewFileDialog(QDialog):
         rastLabel.setFont(labelFont)
         rastBox = QCheckBox('RAST')
 
+        # metagene box
+        METAGENE_LABEL_TEXT = 'Metagene'
+        metageneLabel = QLabel(METAGENE_LABEL_TEXT)
+        metageneLabel.setFont(labelFont)
+        metageneBox = QCheckBox(METAGENE_LABEL_TEXT)
+
         # dictionary mapping tools to checkboxes
         self.toolCheckBoxes = dict()
         self.toolCheckBoxes['gm'] = gmBox
@@ -414,6 +426,7 @@ class NewFileDialog(QDialog):
         self.toolCheckBoxes['glimmer'] = glimmerBox
         self.toolCheckBoxes['prodigal'] = prodigalBox
         self.toolCheckBoxes['rast'] = rastBox
+        self.toolCheckBoxes[METAGENE] = metageneBox
         for box in self.toolCheckBoxes.values():
             # set all boxes to default to being checked
             # box.setChecked(True)
@@ -463,6 +476,9 @@ class NewFileDialog(QDialog):
         # rast
         checkBoxLayout.addWidget(rastLabel, 3, 2)
         checkBoxLayout.addWidget(rastBox, 4, 2)
+        # metagene
+        checkBoxLayout.addWidget(metageneLabel, 5, 0)
+        checkBoxLayout.addWidget(metageneBox, 6, 0)
 
         # species
         speciesLayout.addWidget(speciesLabel)
@@ -960,7 +976,7 @@ class GeneMain(QMainWindow):
                 # enable / disable actions
                 self.enableActions()
                 # update window title with temporary file name
-                self.setWindowTitle('GeneQuery - {}'.format('untitled*'))
+                self.setWindowTitle('{} - {}'.format(APP_NAME, 'untitled*'))
                 # display gene data
                 self.updateTable()
             # query was canceled by user - back to main window
@@ -1009,7 +1025,7 @@ class GeneMain(QMainWindow):
                     # save location
                     self.settings.setValue(self._LAST_OPEN_FILE_LOCATION_SETTING, os.path.split(openFileName[0])[0])
                     # change window titles
-                    self.setWindowTitle('GeneQuery - {}'.format(openFileName[0]))
+                    self.setWindowTitle('{} - {}'.format(APP_NAME, openFileName[0]))
                     # update table
                     self.updateTable()
 
@@ -1058,7 +1074,7 @@ class GeneMain(QMainWindow):
             # update file name
             # update window title
             baseFileName = os.path.split(self.queryData.fileName)[1]
-            self.setWindowTitle('GeneQuery - {}'.format(baseFileName))
+            self.setWindowTitle('{} - {}'.format(APP_NAME, baseFileName))
             # allow normal saves
             # self.saveAction.setEnabled(True)
             self.saveEnabled = True
@@ -1151,7 +1167,7 @@ class GeneMain(QMainWindow):
         """
         if self.dirty:
             userReply = QMessageBox.question(self,
-                                             'GeneQuery - Unsaved Changes',
+                                             '{} - Unsaved Changes'.format(APP_NAME),
                                              'Save changes? - Data may be lost',
                                              QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
             # User cancels - return to main window

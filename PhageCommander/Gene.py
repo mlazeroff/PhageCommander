@@ -17,7 +17,7 @@ import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from PyQt5.QtCore import QSettings
-from PhageCommander.Utilities import RastPy
+from PhageCommander.Utilities import RastPy, MetagenePy
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.gatech.edu/GeneMark/'
@@ -34,7 +34,7 @@ with open(species_file, 'r') as file:
     SPECIES = [specie.strip() for specie in file]
 
 # tools
-TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer', 'rast']
+TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer', 'rast', 'metagene']
 
 
 class Error(Exception):
@@ -72,12 +72,12 @@ class GeneFile:
                 current_byte = input_file.read(1)
 
         # full path
-        self.full = sequence_file
+        self.file_path = sequence_file
         # get base file name
-        self.name = str(os.path.basename(sequence_file).split('.')[0])
+        self.file_name = str(os.path.basename(sequence_file).split('.')[0])
 
         # File creation for post requests
-        self.file_info = {'file': (self.name, input_file_data, 'application/octet-stream')}
+        self.file_info = {'file': (self.file_name, input_file_data, 'application/octet-stream')}
 
         # Gene species - Check if compatible type, if not, exit
         if species not in SPECIES:
@@ -320,7 +320,7 @@ class GeneFile:
         # # get path for prodigal exe
 
         # generate prodigal command and run
-        cmd = '\"{}\" -i \"{}\" -p meta'.format(self.prodigalLocation, self.full)
+        cmd = '\"{}\" -i \"{}\" -p meta'.format(self.prodigalLocation, self.file_path)
         proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
         stdout, stderr = proc.communicate()
 
@@ -345,7 +345,7 @@ class GeneFile:
         # if a jobID was given, check if it is complete
         if jobId is None or not rastJob.checkIfComplete():
             # submit
-            rastJob.submit(self.full, self.name)
+            rastJob.submit(self.file_path, self.file_name)
 
             # check periodically for job completion
             RAST_COMPLETION_CHECK_DELAY = 15
@@ -355,6 +355,13 @@ class GeneFile:
 
         # job is complete - retrieve gene annotation
         self.query_data['rast'] = rastJob.retrieveData()
+
+    def metageneQuery(self):
+        """
+        Query Metagene servers for analysis
+        """
+        metaGene = MetagenePy.Metagene(self.file_path, self.file_name)
+        self.query_data['metagene'] = metaGene.query()
 
 
 class GeneError(Error):
@@ -873,6 +880,16 @@ class GeneParse:
 
         return genes
 
+    @staticmethod
+    def parse_metagene(metagene_data: str, identity: str = ''):
+        """
+        Parse a metagene output file for Genes
+        :param metagene_data: output of Metagene tool
+        :param identity: optional identity for gene
+        :return: List[Gene]
+        """
+        return MetagenePy.Metagene.parse(metagene_data, identity)
+
 
 def write_gene(gene, row, ws, indexes):
     """
@@ -1060,5 +1077,3 @@ if __name__ == '__main__':
     gfile.rastQuery(username='mlazeroff',
                     password='chester')
     data = gfile.query_data['rast']
-
-
