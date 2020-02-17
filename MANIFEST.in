@@ -1,6 +1,5 @@
-include genequery/species.txt
-include genequery/prodigal.exe
-include genequery/GuiWidgets/*
-include genequery/Utilities/*
+include phagecommander/species.txt
+include phagecommander/GuiWidgets/*
+include phagecommander/Utilities/*
 include README.md
 include LICENSE
