@@ -1,0 +1,16 @@
+# compiled files
+*.pyc
+
+# idea 
+/.idea/
+
+# Setuptools
+/dist/
+
+/venv/
+
+# Test files
+/tests/
+
+# Egg metadata
+/*.egg-info
