@@ -7,7 +7,7 @@ setuptools.setup(
     author='Matthew Lazeroff',
     author_email='lazeroff@unlv.nevada.edu',
     description='Utilties for analyzing Fasta DNA Sequences with GeneMark/Glimmer',
-    url='https://github.com/mlazeroff/GeneQuery',
+    url='https://github.com/mlazeroff/PhageCommander',
     packages=['phagecommander'],
     package_data={'phagecommander': ['species.txt', 'GuiWidgets/*', 'Utilities/*']},
     install_requires=['requests',
