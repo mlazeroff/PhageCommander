@@ -6,7 +6,7 @@ with open('README.md', 'r') as file:
 setuptools.setup(
     name='phage-commander',
     license='GPL-3',
-    version='0.4dev',
+    version='0.4.1dev',
     author='Matthew Lazeroff',
     author_email='lazeroff@unlv.nevada.edu',
     description='Utilties for analyzing Fasta DNA Sequences with GeneMark/Glimmer',
