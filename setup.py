@@ -16,7 +16,7 @@ setuptools.setup(
                       'pyqt5',
                       'biopython',
                       'ruamel.yaml'],
-    entry_points={'gui_scripts': 'phageCommander = phagecommander.phagecommander:main'},
+    entry_points={'gui_scripts': 'phageCommander = phagecommander.phagecom:main'},
     classifiers=["Programming Language :: Python :: 3",
                  "License :: OSI Approved :: GPL-3",
                  "Operating System :: Windows",
