@@ -5,6 +5,7 @@ Author: Matthew Lazeroff
 
 import requests
 from bs4 import BeautifulSoup
+import json
 import time
 import os
 from typing import Callable, List
@@ -411,6 +412,16 @@ class Gene:
         except GeneError:
             raise
         self.length = self.stop - self.start + 1
+
+    def jsonDump(self):
+
+        data = {'start': self.start,
+                'stop': self.stop,
+                'direction': self.direction,
+                'length': self.length,
+                'identity': self.identity}
+
+        return data
 
     def __eq__(self, other):
         """
