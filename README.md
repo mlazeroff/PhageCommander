@@ -31,6 +31,17 @@ Install via pip and git
 pip install git+https://github.com/mlazeroff/PhageCommander
 ```
 
+### Running
+```shell script
+# on Windows
+phagecom.exe
+```
+```shell script
+# on MacOS/Linux
+phagecom
+```
+**Note:** The pip "Scripts" directory should be included your PATH variable.
+
 ## Author
 * **Matthew Lazeroff**
 ## License
