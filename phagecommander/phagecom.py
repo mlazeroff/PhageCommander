@@ -674,8 +674,9 @@ class QueryManager(QThread):
                 return
 
             # wipe user creds on RAST return
-            if self.queryData.toolData[RAST] is not None:
-                self.queryData.wipeUserCredentials()
+            if RAST in self.queryData.toolData:
+                if self.queryData.toolData[RAST] is not None:
+                    self.queryData.wipeUserCredentials()
 
         self.exit()
 
