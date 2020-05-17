@@ -379,7 +379,6 @@ class GeneFeature:
         self.start = start
         self.stop = stop
 
-
         if direction not in GeneFeature.DIRECTIONS:
             raise TypeError(f'Invalid direction {direction}')
         self.direction = direction
@@ -398,6 +397,9 @@ class GeneFeature:
                 else:  # - direction
                     if self.start == other.start:
                         return True
+
+        return False
+
 
 class Gene(GeneFeature):
     """
@@ -445,29 +447,29 @@ class Gene(GeneFeature):
 
         return data
 
-    def __eq__(self, other):
-        """
-        Checks if Genes can possibly represent the same Gene
-        For + direction, True is stop codons are same
-        For - direction, True if start codons are same
-        :param other: Gene object
-        :return: True / False
-        """
-        try:
-            if isinstance(other, GeneFeature):
-                if self.direction == other.direction:
-                    if self.direction == '+':
-                        if self.stop == other.stop:
-                            return True
-                    else:  # - direction
-                        if self.start == other.start:
-                            return True
-            else:
-                raise GeneError("Gene Eq: Comparing object must be of Gene type")
-        except GeneError:
-            raise
-
-        return False
+    # def __eq__(self, other):
+    #     """
+    #     Checks if Genes can possibly represent the same Gene
+    #     For + direction, True is stop codons are same
+    #     For - direction, True if start codons are same
+    #     :param other: Gene object
+    #     :return: True / False
+    #     """
+    #     try:
+    #         if isinstance(other, GeneFeature):
+    #             if self.direction == other.direction:
+    #                 if self.direction == '+':
+    #                     if self.stop == other.stop:
+    #                         return True
+    #                 else:  # - direction
+    #                     if self.start == other.start:
+    #                         return True
+    #         else:
+    #             raise GeneError("Gene Eq: Comparing object must be of Gene type")
+    #     except GeneError:
+    #         raise
+    #
+    #     return False
 
     def __str__(self):
         """

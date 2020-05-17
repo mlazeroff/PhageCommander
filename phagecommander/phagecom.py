@@ -479,6 +479,9 @@ class NewFileDialog(QDialog):
         """
         On Clicking "Query"
         """
+        # reset toolData
+        self.queryData.toolData = dict()
+
         # update tool calls based on user selection + allocates entry in toolData
         for key in self.queryData.tools.keys():
             self.queryData.tools[key] = self.toolCheckBoxes[key].isChecked()
@@ -622,6 +625,10 @@ class QueryThread(QThread):
         # update query object with genes
         self.queryData.toolData[self.tool] = genes
 
+        # wipe RAST user creds
+        if self.tool == RAST:
+            self.queryData.wipeUserCredentials()
+
 
 class QueryManager(QThread):
     """
@@ -672,11 +679,6 @@ class QueryManager(QThread):
         for tool in self.queryData.toolData:
             if self.queryData.toolData[tool] is None:
                 return
-
-            # wipe user creds on RAST return
-            if RAST in self.queryData.toolData:
-                if self.queryData.toolData[RAST] is not None:
-                    self.queryData.wipeUserCredentials()
 
         self.exit()
 
