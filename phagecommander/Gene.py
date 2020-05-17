@@ -3,6 +3,7 @@ GeneMark Query
 Author: Matthew Lazeroff
 """
 
+import attr
 import requests
 from bs4 import BeautifulSoup
 import json
@@ -370,7 +371,35 @@ class GeneError(Error):
         self.message = message
 
 
-class Gene:
+class GeneFeature:
+
+    DIRECTIONS = {'+', '-'}
+
+    def __init__(self, start: int, stop: int, direction: str):
+        self.start = start
+        self.stop = stop
+
+
+        if direction not in GeneFeature.DIRECTIONS:
+            raise TypeError(f'Invalid direction {direction}')
+        self.direction = direction
+
+        self.length = stop - start + 1
+
+    def __eq__(self, other):
+
+        if not isinstance(other, GeneFeature):
+            raise TypeError(f'== cannot be used with type: {type(other)}')
+        else:
+            if self.direction == other.direction:
+                if self.direction == '+':
+                    if self.stop == other.stop:
+                        return True
+                else:  # - direction
+                    if self.start == other.start:
+                        return True
+
+class Gene(GeneFeature):
     """
     Class for representing a potential gene encoding
     """
@@ -386,32 +415,25 @@ class Gene:
         # check for "<3" or ">3" style starts, stops
         if '<' in start:
             start = start.split('<')[-1]
-            self.start = int(start)
+            start = int(start)
         elif '&lt;' in start:
             start = start.split('&lt;')[-1]
-            self.start = int(start)
+            start = int(start)
         else:
-            self.start = int(start)
+            start = int(start)
 
         if '>' in stop:
             stop = stop.split('>')[-1]
-            self.stop = int(stop)
+            stop = int(stop)
         elif '&gt;' in stop:
             stop = stop.split('&gt;')[-1]
-            self.stop = int(stop)
+            stop = int(stop)
         else:
-            self.stop = int(stop)
+            stop = int(stop)
 
         self.identity = identity
-        # check for proper direction
-        try:
-            if direction != '+' and direction != '-':
-                raise GeneError("Direction must be + or -")
-            else:
-                self.direction = direction
-        except GeneError:
-            raise
-        self.length = self.stop - self.start + 1
+
+        super(Gene, self).__init__(start, stop, direction)
 
     def jsonDump(self):
 
@@ -432,7 +454,7 @@ class Gene:
         :return: True / False
         """
         try:
-            if isinstance(other, Gene):
+            if isinstance(other, GeneFeature):
                 if self.direction == other.direction:
                     if self.direction == '+':
                         if self.stop == other.stop:
