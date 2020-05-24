@@ -852,12 +852,6 @@ class GeneMain(QMainWindow):
         super(GeneMain, self).__init__(parent)
 
         # WIDGETS ----------------------------------------------------------------------------------
-        # dock
-        tableDock = QDockWidget('Table', self)
-        tableDock.setObjectName('tableDock')
-        tableDock.setAllowedAreas(Qt.TopDockWidgetArea)
-        tableDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
-
         # gene table
         self.geneTable = QTableWidget()
 
