@@ -847,11 +847,15 @@ class GeneMain(QMainWindow):
 
     _LAST_OPEN_FILE_LOCATION_SETTING = 'GENE_MAIN/last_open_file_location'
     _PRODIGAL_BINARY_LOCATION_SETTING = 'GENE_MAIN/prodigal_location'
+    _GENE_TAB_LABEL = 'Genes'
 
     def __init__(self, parent=None):
         super(GeneMain, self).__init__(parent)
 
         # WIDGETS ----------------------------------------------------------------------------------
+        # central tab widget
+        self.tab = QTabWidget()
+
         # gene table
         self.geneTable = QTableWidget()
 
@@ -860,7 +864,7 @@ class GeneMain(QMainWindow):
         self.status.showMessage('Ready')
 
         # LAYOUT -----------------------------------------------------------------------------------
-        self.setCentralWidget(self.geneTable)
+        self.setCentralWidget(self.tab)
 
         # ACTIONS ----------------------------------------------------------------------------------
         # new query
@@ -1168,6 +1172,8 @@ class GeneMain(QMainWindow):
         Displays Gene data to Table
         :return:
         """
+        self.tab.removeTab(0)
+
         # remove any existing cells
         self.geneTable.setRowCount(0)
 
@@ -1365,6 +1371,9 @@ class GeneMain(QMainWindow):
                 self.geneTable.setItem(currentRow, column, item)
             item.setBackground(color)
             item.setForeground(textColor)
+
+        # show tab
+        self.tab.addTab(self.geneTable, self._GENE_TAB_LABEL)
 
     def enableActions(self):
         """
