@@ -55,7 +55,11 @@ def aragorn_query(file_path: str, rna_type: str = 'tRNA', use_introns: bool = Fa
     file_post = requests.post(URL, data=form_data, files=file_info)
     file_post.raise_for_status()
 
-    soup = BeautifulSoup(file_post.content, 'html.parser')
+    return file_post.content
+
+
+def aragorn_parse(aragorn_data: str, id=None):
+    soup = BeautifulSoup(aragorn_data, 'html.parser')
     trnas = soup.find('pre')
 
     genes: List['Gene.TRNA'] = []
@@ -76,7 +80,7 @@ def aragorn_query(file_path: str, rna_type: str = 'tRNA', use_introns: bool = Fa
                 else:
                     direction = '+'
                     start, stop = ast.literal_eval(seq_data[2])
-                gene = Gene.TRNA(start, stop, direction, seq_type)
+                gene = Gene.TRNA(start, stop, direction, seq_type, identity=id)
                 genes.append(gene)
 
     return genes

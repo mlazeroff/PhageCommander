@@ -1,6 +1,7 @@
 import os
 import pickle
 import pathlib
+from typing import List
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -10,36 +11,78 @@ from Bio import SeqIO
 from phagecommander import Gene
 import phagecommander.GuiWidgets
 from phagecommander.Utilities import ThreadData, ProdigalRelease, Aragorn
-from phagecommander.Utilities.QueryData import QueryData
-
 
 APP_NAME = 'Phage Commander'
 
 # list of tool calls
 RAST = 'rast'
 METAGENE = 'metagene'
-TOOL_NAMES = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'glimmer', 'prodigal', RAST, METAGENE]
+ARAGORN = 'aragorn'
+GENEMARK = 'gm'
+HMM = 'hmm'
+HEURISTIC = 'heuristic'
+GENEMARKS = 'gms'
+GENEMARKS2 = 'gms2'
+GLIMMER = 'glimmer'
+PRODIGAL = 'prodigal'
+TOOL_NAMES = [GENEMARK, HMM, HEURISTIC, GENEMARKS, GENEMARKS2, GLIMMER, PRODIGAL, RAST, METAGENE, ARAGORN]
+GENE_TOOLS = [GENEMARK, HMM, HEURISTIC, GENEMARKS, GENEMARKS2, GLIMMER, PRODIGAL, RAST, METAGENE]
+TRNA_TOOLS = [ARAGORN]
 
 # mappings of tool names to appropriate methods
 # [queryMethod, parseMethod]
-TOOL_METHODS = {'gm': [Gene.GeneFile.genemark_query,
-                       Gene.GeneParse.parse_genemark],
-                'hmm': [Gene.GeneFile.genemarkhmm_query,
-                        Gene.GeneParse.parse_genemarkHmm],
-                'heuristic': [Gene.GeneFile.genemark_heuristic_query,
-                              Gene.GeneParse.parse_genemarkHeuristic],
-                'gms': [Gene.GeneFile.genemarks_query,
-                        Gene.GeneParse.parse_genemarkS],
-                'gms2': [Gene.GeneFile.genemarks2_query,
-                         Gene.GeneParse.parse_genemarkS2],
-                'glimmer': [Gene.GeneFile.glimmer_query,
-                            Gene.GeneParse.parse_glimmer],
-                'prodigal': [Gene.GeneFile.prodigal_query,
-                             Gene.GeneParse.parse_prodigal],
+TOOL_METHODS = {GENEMARK: [Gene.GeneFile.genemark_query,
+                           Gene.GeneParse.parse_genemark],
+                HMM: [Gene.GeneFile.genemarkhmm_query,
+                      Gene.GeneParse.parse_genemarkHmm],
+                HEURISTIC: [Gene.GeneFile.genemark_heuristic_query,
+                            Gene.GeneParse.parse_genemarkHeuristic],
+                GENEMARKS: [Gene.GeneFile.genemarks_query,
+                            Gene.GeneParse.parse_genemarkS],
+                GENEMARKS2: [Gene.GeneFile.genemarks2_query,
+                             Gene.GeneParse.parse_genemarkS2],
+                GLIMMER: [Gene.GeneFile.glimmer_query,
+                          Gene.GeneParse.parse_glimmer],
+                PRODIGAL: [Gene.GeneFile.prodigal_query,
+                           Gene.GeneParse.parse_prodigal],
                 RAST: [Gene.GeneFile.rastQuery,
                        Gene.GeneParse.parse_rast],
                 METAGENE: [Gene.GeneFile.metageneQuery,
-                           Gene.GeneParse.parse_metagene]}
+                           Gene.GeneParse.parse_metagene],
+                ARAGORN: [Gene.GeneFile.aragornQuery,
+                          Gene.GeneParse.parse_aragorn]}
+
+
+class QueryData:
+    """
+    Class for representing tool/species selections
+    """
+
+    def __init__(self):
+        # tools to call
+        self.tools = {key: True for key in TOOL_NAMES}
+        # species of the DNA sequence
+        self.species = ''
+        # path of the DNA file
+        self.fileName = ''
+        # tool data
+        # Key - tool (from TOOL_NAMES)
+        # Value - List of Genes
+        self.toolData = dict()
+        # sequence
+        self.sequence = ''
+        # RAST related information
+        self.rastUser = ''
+        self.rastPass = ''
+        self.rastJobID = None
+
+    def wipeUserCredentials(self):
+        """
+        Deletes any data relating to a RAST query
+        """
+        self.rastJobID = None
+        self.rastUser = None
+        self.rastPass = None
 
 
 class ColorTable(QWidget):
@@ -94,7 +137,7 @@ class ColorTable(QWidget):
         # WIDGETS ------------------------------------------------------------------------------------------------------
         # Color Selection Table
         self.tableWidget = QTableWidget()
-        self.tableWidget.setRowCount(len(TOOL_NAMES))
+        self.tableWidget.setRowCount(len(GENE_TOOLS))
         self.tableWidget.setColumnCount(len(self._TABLE_COLUMN_HEADERS))
         self.tableWidget.setHorizontalHeaderLabels(self._TABLE_COLUMN_HEADERS)
         self.tableWidget.horizontalHeader()
@@ -112,7 +155,7 @@ class ColorTable(QWidget):
 
         # insert items into table
         tableHeight = self.tableWidget.horizontalHeader().height()
-        for i in range(len(TOOL_NAMES)):
+        for i in range(len(GENE_TOOLS)):
             self.tableWidget.setRowHeight(i, 20)
             tableHeight += self.tableWidget.rowHeight(i)
             item = QTableWidgetItem()
@@ -264,11 +307,11 @@ class ColorTable(QWidget):
         Checks if the default color settings exist in the QSettings. If not, populates them
         :param settings: QSettings
         """
-        cellColorSettings = [settings.value(ColorTable.CELL_COLOR_SETTING + str(i)) for i in range(len(TOOL_NAMES))]
+        cellColorSettings = [settings.value(ColorTable.CELL_COLOR_SETTING + str(i)) for i in range(len(GENE_TOOLS))]
         majorityColorSettings = [settings.value(ColorTable.MAJORITY_TEXT_SETTING + str(i)) for i in
-                                 range(len(TOOL_NAMES))]
+                                 range(len(GENE_TOOLS))]
         minorityColorSettings = [settings.value(ColorTable.MINORITY_TEXT_SETTING + str(i)) for i in
-                                 range(len(TOOL_NAMES))]
+                                 range(len(GENE_TOOLS))]
 
         if None in cellColorSettings or None in majorityColorSettings or None in minorityColorSettings:
             ColorTable._setDefaultSettings(settings)
@@ -279,7 +322,7 @@ class ColorTable(QWidget):
         Sets the settings related to cell colors to default values
         :param settings: QSettings object
         """
-        for i in range(len(TOOL_NAMES)):
+        for i in range(len(GENE_TOOLS)):
             # CELL COLORS
             defaultColorStr = ' '.join(str(color) for color in ColorTable._DEFAULT_CELL_COLORS[i])
             settings.setValue(ColorTable.CELL_COLOR_SETTING + str(i), defaultColorStr)
@@ -388,6 +431,12 @@ class NewFileDialog(QDialog):
         metageneLabel.setFont(labelFont)
         metageneBox = QCheckBox(METAGENE_LABEL_TEXT)
 
+        # aragorn box
+        ARAGORN_LABEL_TEXT = 'Aragorn'
+        aragornLabel = QLabel(ARAGORN_LABEL_TEXT)
+        aragornLabel.setFont(labelFont)
+        aragornBox = QCheckBox(ARAGORN_LABEL_TEXT)
+
         # dictionary mapping tools to checkboxes
         self.toolCheckBoxes = dict()
         self.toolCheckBoxes['gm'] = gmBox
@@ -399,6 +448,7 @@ class NewFileDialog(QDialog):
         self.toolCheckBoxes['prodigal'] = prodigalBox
         self.toolCheckBoxes['rast'] = rastBox
         self.toolCheckBoxes[METAGENE] = metageneBox
+        self.toolCheckBoxes[ARAGORN] = aragornBox
         for box in self.toolCheckBoxes.values():
             # set all boxes to default to being checked
             # box.setChecked(True)
@@ -451,6 +501,9 @@ class NewFileDialog(QDialog):
         # metagene
         checkBoxLayout.addWidget(metageneLabel, 5, 0)
         checkBoxLayout.addWidget(metageneBox, 6, 0)
+        # aragorn
+        checkBoxLayout.addWidget(aragornLabel, 5, 1)
+        checkBoxLayout.addWidget(aragornBox, 6, 1)
 
         # species
         speciesLayout.addWidget(speciesLabel)
@@ -848,6 +901,7 @@ class GeneMain(QMainWindow):
     _LAST_OPEN_FILE_LOCATION_SETTING = 'GENE_MAIN/last_open_file_location'
     _PRODIGAL_BINARY_LOCATION_SETTING = 'GENE_MAIN/prodigal_location'
     _GENE_TAB_LABEL = 'Genes'
+    _TRNA_TAB_LABEL = 'TRNA'
 
     def __init__(self, parent=None):
         super(GeneMain, self).__init__(parent)
@@ -856,8 +910,9 @@ class GeneMain(QMainWindow):
         # central tab widget
         self.tab = QTabWidget()
 
-        # gene table
+        # tables
         self.geneTable = QTableWidget()
+        self.trnaTable = QTableWidget()
 
         # status bar
         self.status = self.statusBar()
@@ -1172,18 +1227,34 @@ class GeneMain(QMainWindow):
         Displays Gene data to Table
         :return:
         """
-        self.tab.removeTab(0)
+        # render tables if data exists
+        GENES_COMPLETE = False
+        TRNA_COMPLETE = False
+        for key in self.queryData.toolData.keys():
+            if key in GENE_TOOLS and not GENES_COMPLETE:
+                self._update_table(self.geneTable, GENE_TOOLS, 0, self._GENE_TAB_LABEL)
+                GENES_COMPLETE = True
+            elif key in TRNA_TOOLS and not TRNA_COMPLETE:
+                self._update_table(self.trnaTable, TRNA_TOOLS, 1, self._TRNA_TAB_LABEL)
+                TRNA_COMPLETE = True
+
+    def _update_table(self, table: QTableWidget, toolList: List[str], index: int, label: str):
+
+        self.tab.removeTab(index)
 
         # remove any existing cells
-        self.geneTable.setRowCount(0)
+        table.setRowCount(0)
 
         # table options
-        self.geneTable.setSelectionMode(QTableWidget.NoSelection)
+        table.setSelectionMode(QTableWidget.NoSelection)
 
         # sort genes
         genes = []
+        usedGeneTools = []
         for tool in self.queryData.toolData:
-            genes += self.queryData.toolData[tool]
+            if tool in toolList:
+                usedGeneTools.append(tool)
+                genes += self.queryData.toolData[tool]
 
         # nothing to display - exit
         if len(genes) == 0:
@@ -1195,11 +1266,11 @@ class GeneMain(QMainWindow):
         self.genes = []
 
         # calculate columns for tools
-        toolNumber = len(self.queryData.toolData.keys())
+        toolNumber = len(usedGeneTools)
         toolColumns = toolNumber * 4 + toolNumber - 1
         totalColumns = toolColumns + 3
         # add 3 columns for statistics
-        self.geneTable.setColumnCount(totalColumns)
+        table.setColumnCount(totalColumns)
 
         # generate headers
         headerIndexes = dict()
@@ -1208,7 +1279,7 @@ class GeneMain(QMainWindow):
         ONE_COLUMN = 2
         currIndex = 3
         headers = ['TOTAL CALLS', 'ALL', 'ONE']
-        for ind, tool in enumerate(self.queryData.toolData.keys()):
+        for ind, tool in enumerate(usedGeneTools):
             headerIndexes[tool] = currIndex
             for i in range(4):
                 currIndex += 1
@@ -1218,12 +1289,12 @@ class GeneMain(QMainWindow):
                 currIndex += 1
 
         # set headers
-        self.geneTable.setHorizontalHeaderLabels(headers)
+        table.setHorizontalHeaderLabels(headers)
 
         # populate table
         # insert first gene
         currentRow = 0
-        self.geneTable.insertRow(currentRow)
+        table.insertRow(currentRow)
         previousGene = genes[0]
         currentGeneCount = 1
         currentGeneSet = [genes[0]]
@@ -1232,19 +1303,19 @@ class GeneMain(QMainWindow):
         # direction
         directionItem = QTableWidgetItem(previousGene.direction)
         directionItem.setTextAlignment(Qt.AlignCenter)
-        self.geneTable.setItem(currentRow, geneIndex, directionItem)
+        table.setItem(currentRow, geneIndex, directionItem)
         # start
         startItem = QTableWidgetItem(str(previousGene.start))
         startItem.setTextAlignment(Qt.AlignCenter)
-        self.geneTable.setItem(currentRow, geneIndex + 1, startItem)
+        table.setItem(currentRow, geneIndex + 1, startItem)
         # stop
         stopItem = QTableWidgetItem(str(previousGene.stop))
         stopItem.setTextAlignment(Qt.AlignCenter)
-        self.geneTable.setItem(currentRow, geneIndex + 2, stopItem)
+        table.setItem(currentRow, geneIndex + 2, stopItem)
         # length
         lengthItem = QTableWidgetItem(str(previousGene.length))
         lengthItem.setTextAlignment(Qt.AlignCenter)
-        self.geneTable.setItem(currentRow, geneIndex + 3, lengthItem)
+        table.setItem(currentRow, geneIndex + 3, lengthItem)
 
         if previousGene.direction == '+':
             comparingNum = previousGene.start
@@ -1269,15 +1340,15 @@ class GeneMain(QMainWindow):
                 # record TOTAL_CALLS, ALL and ONE for previous gene
                 totalItem = QTableWidgetItem(str(currentGeneCount))
                 totalItem.setTextAlignment(Qt.AlignCenter)
-                self.geneTable.setItem(currentRow, TOTAL_CALLS_COLUMN, totalItem)
+                table.setItem(currentRow, TOTAL_CALLS_COLUMN, totalItem)
                 if currentGeneCount == toolNumber:
                     allItem = QTableWidgetItem(str('X'))
                     allItem.setTextAlignment(Qt.AlignCenter)
-                    self.geneTable.setItem(currentRow, ALL_COLUMN, allItem)
+                    table.setItem(currentRow, ALL_COLUMN, allItem)
                 elif currentGeneCount == 1:
                     oneItem = QTableWidgetItem(str('X'))
                     oneItem.setTextAlignment(Qt.AlignCenter)
-                    self.geneTable.setItem(currentRow, ONE_COLUMN, oneItem)
+                    table.setItem(currentRow, ONE_COLUMN, oneItem)
 
                 # color row
                 colorSetting = self.settings.value(ColorTable.CELL_COLOR_SETTING + str(currentGeneCount - 1))
@@ -1289,11 +1360,11 @@ class GeneMain(QMainWindow):
                 textColor = QColor(*textNums)
                 # TODO: Figure out minority rule
                 for column in range(totalColumns):
-                    item = self.geneTable.item(currentRow, column)
+                    item = table.item(currentRow, column)
                     # insert blank item if none is present
                     if item is None:
                         item = QTableWidgetItem('')
-                        self.geneTable.setItem(currentRow, column, item)
+                        table.setItem(currentRow, column, item)
                     item.setBackground(color)
                     item.setForeground(textColor)
 
@@ -1301,7 +1372,7 @@ class GeneMain(QMainWindow):
                 currentGeneCount = 1
                 currentGenes = dict()
                 currentRow += 1
-                self.geneTable.insertRow(currentRow)
+                table.insertRow(currentRow)
 
                 # add full set to genes
                 self.genes.append(currentGeneSet)
@@ -1311,19 +1382,19 @@ class GeneMain(QMainWindow):
             # direction
             directionItem = QTableWidgetItem(gene.direction)
             directionItem.setTextAlignment(Qt.AlignCenter)
-            self.geneTable.setItem(currentRow, geneIndex, directionItem)
+            table.setItem(currentRow, geneIndex, directionItem)
             # start
             startItem = QTableWidgetItem(str(gene.start))
             startItem.setTextAlignment(Qt.AlignCenter)
-            self.geneTable.setItem(currentRow, geneIndex + 1, startItem)
+            table.setItem(currentRow, geneIndex + 1, startItem)
             # stop
             stopItem = QTableWidgetItem(str(gene.stop))
             stopItem.setTextAlignment(Qt.AlignCenter)
-            self.geneTable.setItem(currentRow, geneIndex + 2, stopItem)
+            table.setItem(currentRow, geneIndex + 2, stopItem)
             # length
             lengthItem = QTableWidgetItem(str(gene.length))
             lengthItem.setTextAlignment(Qt.AlignCenter)
-            self.geneTable.setItem(currentRow, geneIndex + 3, lengthItem)
+            table.setItem(currentRow, geneIndex + 3, lengthItem)
 
             if gene.direction == '+':
                 comparingNum = gene.start
@@ -1341,15 +1412,15 @@ class GeneMain(QMainWindow):
         # record TOTAL_CALLS, ALL and ONE for last gene
         totalItem = QTableWidgetItem(str(currentGeneCount))
         totalItem.setTextAlignment(Qt.AlignCenter)
-        self.geneTable.setItem(currentRow, TOTAL_CALLS_COLUMN, totalItem)
+        table.setItem(currentRow, TOTAL_CALLS_COLUMN, totalItem)
         if currentGeneCount == toolNumber:
             allItem = QTableWidgetItem(str('X'))
             allItem.setTextAlignment(Qt.AlignCenter)
-            self.geneTable.setItem(currentRow, ALL_COLUMN, allItem)
+            table.setItem(currentRow, ALL_COLUMN, allItem)
         elif currentGeneCount == 1:
             oneItem = QTableWidgetItem(str('X'))
             oneItem.setTextAlignment(Qt.AlignCenter)
-            self.geneTable.setItem(currentRow, ONE_COLUMN, oneItem)
+            table.setItem(currentRow, ONE_COLUMN, oneItem)
 
         # append last set of genes
         self.genes.append(currentGeneSet)
@@ -1364,16 +1435,17 @@ class GeneMain(QMainWindow):
         textColor = QColor(*textNums)
         # TODO: Figure out minority rule
         for column in range(totalColumns):
-            item = self.geneTable.item(currentRow, column)
+            item = table.item(currentRow, column)
             # insert blank item if blank cell
             if item is None:
                 item = QTableWidgetItem('')
-                self.geneTable.setItem(currentRow, column, item)
+                table.setItem(currentRow, column, item)
             item.setBackground(color)
             item.setForeground(textColor)
 
         # show tab
-        self.tab.addTab(self.geneTable, self._GENE_TAB_LABEL)
+        # self.tab.addTab(table, self._GENE_TAB_LABEL)
+        self.tab.insertTab(index, table, label)
 
     def enableActions(self):
         """

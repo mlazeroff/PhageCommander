@@ -19,7 +19,7 @@ import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from PyQt5.QtCore import QSettings
-from phagecommander.Utilities import RastPy, MetagenePy
+from phagecommander.Utilities import RastPy, MetagenePy, Aragorn
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.gatech.edu/GeneMark/'
@@ -36,7 +36,7 @@ with open(species_file, 'r') as file:
     SPECIES = [specie.strip() for specie in file]
 
 # tools
-TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer', 'rast', 'metagene']
+TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer', 'rast', 'metagene', 'aragorn']
 
 
 class Error(Exception):
@@ -365,6 +365,9 @@ class GeneFile:
         metaGene = MetagenePy.Metagene(self.file_path, self.file_name)
         self.query_data['metagene'] = metaGene.query()
 
+    def aragornQuery(self):
+        self.query_data['aragorn'] = Aragorn.aragorn_query(self.file_path)
+
 
 class GeneError(Error):
     def __init__(self, message):
@@ -487,11 +490,12 @@ class Gene(GeneFeature):
 
 class TRNA(GeneFeature):
 
-    def __init__(self, start, stop, direction, trna_type):
+    def __init__(self, start, stop, direction, trna_type, identity=None):
 
         super(TRNA, self).__init__(start, stop, direction)
 
         self.type = trna_type
+        self.identity = identity
 
     def __repr__(self):
 
@@ -937,6 +941,17 @@ class GeneParse:
         :return: List[Gene]
         """
         return MetagenePy.Metagene.parse(metagene_data, identity)
+
+    @staticmethod
+    def parse_aragorn(aragorn_data: str, identity: str = ''):
+        """
+        Parse Aragorn output
+        :param aragorn_data:
+        :param identity:
+        :return: List[TRNA]
+        """
+        return Aragorn.aragorn_parse(aragorn_data, id=identity)
+
 
 
 def write_gene(gene, row, ws, indexes):

@@ -267,7 +267,7 @@ class exportDialog(QDialog):
 
 
 if __name__ == '__main__':
-    from phagecommander.Utilities.QueryData import QueryData
+    from phagecommander.phagecom import QueryData
 
     app = QApplication([])
     dig = exportDialog(QueryData(), QSettings())
