@@ -9,8 +9,9 @@ from openpyxl.styles import Font, Alignment, PatternFill
 from Bio import SeqIO
 from phagecommander import Gene
 import phagecommander.GuiWidgets
-from phagecommander.Utilities import ThreadData, ProdigalRelease
+from phagecommander.Utilities import ThreadData, ProdigalRelease, Aragorn
 from phagecommander.Utilities.QueryData import QueryData
+
 
 APP_NAME = 'Phage Commander'
 
