@@ -485,6 +485,19 @@ class Gene(GeneFeature):
         return '({}, {}, {})'.format(self.direction, self.start, self.stop)
 
 
+class TRNA(GeneFeature):
+
+    def __init__(self, start, stop, direction, trna_type):
+
+        super(TRNA, self).__init__(start, stop, direction)
+
+        self.type = trna_type
+
+    def __repr__(self):
+
+        return f'TRNA(start={self.start}, stop={self.stop}, direction={self.direction}, type={self.type}'
+
+
 class GeneUtils:
     """
     Class for operations relating to Genes
@@ -1109,6 +1122,6 @@ if __name__ == '__main__':
     for seq in SeqIO.parse(file, 'fasta'):
         Dissequence = seq
     gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
-    gfile.rastQuery(username='mlazeroff',
-                    password='chester')
     data = gfile.query_data['rast']
+
+
