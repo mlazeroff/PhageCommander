@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import List
 
 from bs4 import BeautifulSoup
-import phagecommander.Gene as Gene
+from phagecommander import Gene
 import requests
 
 URL = 'http://130.235.244.92/bcgi/aragorn.cgi'
