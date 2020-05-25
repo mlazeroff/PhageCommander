@@ -886,6 +886,7 @@ class GeneMain(QMainWindow):
 
     _LAST_OPEN_FILE_LOCATION_SETTING = 'GENE_MAIN/last_open_file_location'
     _PRODIGAL_BINARY_LOCATION_SETTING = 'GENE_MAIN/prodigal_location'
+    _LAST_EXCEL_SAVE_LOCATION_SETTING = 'GENE_MAIN/last_excel_location'
     _GENE_TAB_LABEL = 'Genes'
     _TRNA_TAB_LABEL = 'TRNA'
 
@@ -1113,12 +1114,15 @@ class GeneMain(QMainWindow):
         """
         Save the current table output to a .xlsx file
         """
+        # get last saved excel location
+        excelLocation = pathlib.Path(self.settings.value(self._LAST_EXCEL_SAVE_LOCATION_SETTING))
+
         # open a save file dialog
         fileExtensions = ['Excel Spreadsheet (*.xlsx)',
                           'All Files (*.*)']
         excelFileName = QFileDialog.getSaveFileName(self,
                                                     'Save Excel Spreadsheet As...',
-                                                    '',
+                                                    str(excelLocation),
                                                     ';;'.join(fileExtensions))
 
         # if file name was provided, write to file
@@ -1139,6 +1143,10 @@ class GeneMain(QMainWindow):
                 self._exportTableToExcel(self.trnaTable, 'TRNA', wb)
 
             wb.save(filename=excelFileName[0])
+
+            print(excelFileName[0])
+            excelLocation = str(pathlib.Path(excelFileName[0]).parent)
+            self.settings.setValue(self._LAST_EXCEL_SAVE_LOCATION_SETTING, excelLocation)
 
             self.status.showMessage('Exported Excel file to: {}'.format(excelFileName[0]), 5000)
 
@@ -1538,6 +1546,10 @@ class GeneMain(QMainWindow):
         # OPEN FILE LOCATION
         if self.settings.value(self._LAST_OPEN_FILE_LOCATION_SETTING) is None:
             self.settings.setValue(self._LAST_OPEN_FILE_LOCATION_SETTING, '')
+
+        # EXCEL SAVE LOCATION
+        if self.settings.value(self._LAST_EXCEL_SAVE_LOCATION_SETTING) is None:
+            self.settings.setValue(self._LAST_EXCEL_SAVE_LOCATION_SETTING, '')
 
 
 # MAIN FUNCTION
