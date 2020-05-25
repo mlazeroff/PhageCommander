@@ -3,7 +3,6 @@ GeneMark Query
 Author: Matthew Lazeroff
 """
 
-import attr
 import requests
 from bs4 import BeautifulSoup
 import json
