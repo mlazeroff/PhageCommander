@@ -375,7 +375,6 @@ class GeneError(Error):
 
 
 class GeneFeature:
-
     DIRECTIONS = {'+', '-'}
 
     def __init__(self, start: int, stop: int, direction: str):
@@ -491,14 +490,12 @@ class Gene(GeneFeature):
 class TRNA(GeneFeature):
 
     def __init__(self, start, stop, direction, trna_type, identity=None):
-
         super(TRNA, self).__init__(start, stop, direction)
 
         self.type = trna_type
         self.identity = identity
 
     def __repr__(self):
-
         return f'TRNA(start={self.start}, stop={self.stop}, direction={self.direction}, type={self.type}'
 
 
@@ -591,15 +588,25 @@ class GeneUtils:
         # build features
         features = []
         for ind, gene in enumerate(genes):
+            ind += 1
             direction = 1 if gene.direction == '+' else -1
             geneFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
                                                     type='gene',
                                                     qualifiers={'gene': ind},
                                                     strand=direction)
-            cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
-                                                   type='CDS',
-                                                   qualifiers={'gene': ind},
-                                                   strand=direction)
+            if isinstance(gene, Gene):
+                cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
+                                                       type='CDS',
+                                                       qualifiers={'gene': ind},
+                                                       strand=direction)
+            elif isinstance(gene, TRNA):
+                product = gene.type.split('(')[0]
+                cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
+                                                       type='TRNA',
+                                                       qualifiers={'gene': ind,
+                                                                   'note': gene.type,
+                                                                   'product': product},
+                                                       strand=direction)
             features.append(geneFeature)
             features.append(cdsFeature)
 
@@ -953,7 +960,6 @@ class GeneParse:
         return Aragorn.aragorn_parse(aragorn_data, id=identity)
 
 
-
 def write_gene(gene, row, ws, indexes):
     """
     Writes the passed gene into its corresponding columns in the Excel worksheet
@@ -1138,5 +1144,3 @@ if __name__ == '__main__':
         Dissequence = seq
     gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
     data = gfile.query_data['rast']
-
-
