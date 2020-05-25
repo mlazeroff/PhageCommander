@@ -18,7 +18,7 @@ setuptools.setup(
     install_requires=['requests',
                       'bs4',
                       'openpyxl',
-                      'pyqt5',
+                      'pyqt5>=5.10, <= 5.13.2',
                       'biopython',
                       'ruamel.yaml'],
     entry_points={'gui_scripts': 'phagecom = phagecommander.phagecom:main'},
