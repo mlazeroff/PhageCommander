@@ -1267,6 +1267,7 @@ class GeneMain(QMainWindow):
 
         # remove any existing cells
         table.setRowCount(0)
+        table.setColumnCount(0)
 
         # table options
         table.setSelectionMode(QTableWidget.NoSelection)
@@ -1279,20 +1280,11 @@ class GeneMain(QMainWindow):
                 usedGeneTools.append(tool)
                 genes += self.queryData.toolData[tool]
 
-        # nothing to display - exit
-        if len(genes) == 0:
-            return
-
-        genes = Gene.GeneUtils.sortGenes(genes)
-
-        # reset genes
-        self.genes = []
-
         # calculate columns for tools
         toolNumber = len(usedGeneTools)
         toolColumns = toolNumber * 4 + toolNumber - 1
-        totalColumns = toolColumns + 3
         # add 3 columns for statistics
+        totalColumns = toolColumns + 3
         table.setColumnCount(totalColumns)
 
         # generate headers
@@ -1313,6 +1305,17 @@ class GeneMain(QMainWindow):
 
         # set headers
         table.setHorizontalHeaderLabels(headers)
+
+        # nothing to display - exit
+        if len(genes) == 0:
+            # create an empty table
+            self.tab.insertTab(index, table, label)
+            return
+
+        genes = Gene.GeneUtils.sortGenes(genes)
+
+        # reset genes
+        self.genes = []
 
         # populate table
         # insert first gene
