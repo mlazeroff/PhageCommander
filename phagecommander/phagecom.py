@@ -907,6 +907,8 @@ class GeneMain(QMainWindow):
 
         # LAYOUT -----------------------------------------------------------------------------------
         self.setCentralWidget(self.tab)
+        self.setMinimumWidth(400)
+        self.setMinimumHeight(400)
 
         # ACTIONS ----------------------------------------------------------------------------------
         # new query
