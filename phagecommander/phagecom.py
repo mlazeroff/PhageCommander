@@ -1138,39 +1138,66 @@ class GeneMain(QMainWindow):
         # if file name was provided, write to file
         if excelFileName[0] != '':
 
-            # create excel spreadsheet
+            GENES_USED = False
+            TRNA_USED = False
+            for key in self.queryData.toolData.keys():
+                if key in GENE_TOOLS:
+                    GENES_USED = True
+                elif key in TRNA_TOOLS:
+                    TRNA_USED = True
+
             wb = Workbook()
-            ws = wb.active
-            ws.title = 'Gene Predictions'
-
-            # add content to spreadsheet
-            # add headers
-            currentRow = 1
-            for column in range(self.geneTable.columnCount()):
-                headerValue = self.geneTable.horizontalHeaderItem(column).text()
-                cell = ws.cell(row=currentRow, column=column + 1, value=headerValue)
-                cell.alignment = Alignment(horizontal='center')
-                cell.font = Font(bold=True)
-
-            # add content
-            for row in range(self.geneTable.rowCount()):
-                for column in range(self.geneTable.columnCount()):
-                    currCell = self.geneTable.item(row, column)
-                    cellValue = currCell.text() if currCell is not None else ''
-                    if currCell is not None:
-                        cellColor = currCell.background().color().getRgb()
-                        cellRgbString = ''.join(['{:02x}'.format(num) for num in cellColor[:3]])
-                        fontColor = currCell.foreground().color().getRgb()
-                        fontRgbString = ''.join(['{:02x}'.format(num) for num in fontColor[:3]])
-
-                    # convert an integer string to an integer for spreadsheet functionality
-                    cellValue = int(cellValue) if cellValue.isdecimal() else cellValue
-                    cell = ws.cell(row=row + 2, column=column + 1, value=cellValue)
-                    cell.alignment = Alignment(horizontal='center')
-                    cell.fill = PatternFill(fgColor=cellRgbString, fill_type='solid')
-                    cell.font = Font(color=fontRgbString)
+            if GENES_USED:
+                self._exportTableToExcel(self.geneTable, 'Genes', wb)
+            if TRNA_USED:
+                self._exportTableToExcel(self.trnaTable, 'TRNA', wb)
 
             wb.save(filename=excelFileName[0])
+
+            self.status.showMessage('Exported Excel file to: {}'.format(excelFileName[0]), 5000)
+
+    def _exportTableToExcel(self, table: QTableWidget, label: str, wb: Workbook):
+        """
+        Adds the given table to the Excel Workbook as a new sheet
+        :param table: QTableWidget
+        :param label: Name of the new sheet
+        :param wb: Excel Workbook
+        """
+
+        # check if adding to existing workbook
+        # if not, rename first sheet
+        if wb.sheetnames[0] == 'Sheet':
+            ws = wb['Sheet']
+            ws.title = label
+        else:
+            ws = wb.create_sheet(label)
+
+        # add content to spreadsheet
+        # add headers
+        currentRow = 1
+        for column in range(table.columnCount()):
+            headerValue = table.horizontalHeaderItem(column).text()
+            cell = ws.cell(row=currentRow, column=column + 1, value=headerValue)
+            cell.alignment = Alignment(horizontal='center')
+            cell.font = Font(bold=True)
+
+        # add content
+        for row in range(table.rowCount()):
+            for column in range(table.columnCount()):
+                currCell = table.item(row, column)
+                cellValue = currCell.text() if currCell is not None else ''
+                if currCell is not None:
+                    cellColor = currCell.background().color().getRgb()
+                    cellRgbString = ''.join(['{:02x}'.format(num) for num in cellColor[:3]])
+                    fontColor = currCell.foreground().color().getRgb()
+                    fontRgbString = ''.join(['{:02x}'.format(num) for num in fontColor[:3]])
+
+                # convert an integer string to an integer for spreadsheet functionality
+                cellValue = int(cellValue) if cellValue.isdecimal() else cellValue
+                cell = ws.cell(row=row + 2, column=column + 1, value=cellValue)
+                cell.alignment = Alignment(horizontal='center')
+                cell.fill = PatternFill(fgColor=cellRgbString, fill_type='solid')
+                cell.font = Font(color=fontRgbString)
 
     @pyqtSlot()
     def exportGenbank(self):
