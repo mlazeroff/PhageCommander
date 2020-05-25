@@ -10,6 +10,7 @@ import time
 import os
 from typing import Callable, List
 from subprocess import Popen, PIPE
+import subprocess
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, colors
 import Bio.Seq
@@ -18,7 +19,7 @@ import Bio.SeqRecord
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from PyQt5.QtCore import QSettings
-from phagecommander.Utilities import RastPy, MetagenePy
+from phagecommander.Utilities import RastPy, MetagenePy, Aragorn
 
 # Genemark Domains
 FILE_DOMAIN = 'http://exon.gatech.edu/GeneMark/'
@@ -35,7 +36,7 @@ with open(species_file, 'r') as file:
     SPECIES = [specie.strip() for specie in file]
 
 # tools
-TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer', 'rast', 'metagene']
+TOOLS = ['gm', 'hmm', 'heuristic', 'gms', 'gms2', 'prodigal', 'glimmer', 'rast', 'metagene', 'aragorn']
 
 
 class Error(Exception):
@@ -322,7 +323,7 @@ class GeneFile:
 
         # generate prodigal command and run
         cmd = '\"{}\" -i \"{}\" -p meta'.format(self.prodigalLocation, self.file_path)
-        proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+        proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True, stdin=subprocess.DEVNULL)
         stdout, stderr = proc.communicate()
 
         # check for error, exit if so
@@ -364,13 +365,45 @@ class GeneFile:
         metaGene = MetagenePy.Metagene(self.file_path, self.file_name)
         self.query_data['metagene'] = metaGene.query()
 
+    def aragornQuery(self):
+        self.query_data['aragorn'] = Aragorn.aragorn_query(self.file_path)
+
 
 class GeneError(Error):
     def __init__(self, message):
         self.message = message
 
 
-class Gene:
+class GeneFeature:
+    DIRECTIONS = {'+', '-'}
+
+    def __init__(self, start: int, stop: int, direction: str):
+        self.start = start
+        self.stop = stop
+
+        if direction not in GeneFeature.DIRECTIONS:
+            raise TypeError(f'Invalid direction {direction}')
+        self.direction = direction
+
+        self.length = stop - start + 1
+
+    def __eq__(self, other):
+
+        if not isinstance(other, GeneFeature):
+            raise TypeError(f'== cannot be used with type: {type(other)}')
+        else:
+            if self.direction == other.direction:
+                if self.direction == '+':
+                    if self.stop == other.stop:
+                        return True
+                else:  # - direction
+                    if self.start == other.start:
+                        return True
+
+        return False
+
+
+class Gene(GeneFeature):
     """
     Class for representing a potential gene encoding
     """
@@ -386,32 +419,25 @@ class Gene:
         # check for "<3" or ">3" style starts, stops
         if '<' in start:
             start = start.split('<')[-1]
-            self.start = int(start)
+            start = int(start)
         elif '&lt;' in start:
             start = start.split('&lt;')[-1]
-            self.start = int(start)
+            start = int(start)
         else:
-            self.start = int(start)
+            start = int(start)
 
         if '>' in stop:
             stop = stop.split('>')[-1]
-            self.stop = int(stop)
+            stop = int(stop)
         elif '&gt;' in stop:
             stop = stop.split('&gt;')[-1]
-            self.stop = int(stop)
+            stop = int(stop)
         else:
-            self.stop = int(stop)
+            stop = int(stop)
 
         self.identity = identity
-        # check for proper direction
-        try:
-            if direction != '+' and direction != '-':
-                raise GeneError("Direction must be + or -")
-            else:
-                self.direction = direction
-        except GeneError:
-            raise
-        self.length = self.stop - self.start + 1
+
+        super(Gene, self).__init__(start, stop, direction)
 
     def jsonDump(self):
 
@@ -423,29 +449,29 @@ class Gene:
 
         return data
 
-    def __eq__(self, other):
-        """
-        Checks if Genes can possibly represent the same Gene
-        For + direction, True is stop codons are same
-        For - direction, True if start codons are same
-        :param other: Gene object
-        :return: True / False
-        """
-        try:
-            if isinstance(other, Gene):
-                if self.direction == other.direction:
-                    if self.direction == '+':
-                        if self.stop == other.stop:
-                            return True
-                    else:  # - direction
-                        if self.start == other.start:
-                            return True
-            else:
-                raise GeneError("Gene Eq: Comparing object must be of Gene type")
-        except GeneError:
-            raise
-
-        return False
+    # def __eq__(self, other):
+    #     """
+    #     Checks if Genes can possibly represent the same Gene
+    #     For + direction, True is stop codons are same
+    #     For - direction, True if start codons are same
+    #     :param other: Gene object
+    #     :return: True / False
+    #     """
+    #     try:
+    #         if isinstance(other, GeneFeature):
+    #             if self.direction == other.direction:
+    #                 if self.direction == '+':
+    #                     if self.stop == other.stop:
+    #                         return True
+    #                 else:  # - direction
+    #                     if self.start == other.start:
+    #                         return True
+    #         else:
+    #             raise GeneError("Gene Eq: Comparing object must be of Gene type")
+    #     except GeneError:
+    #         raise
+    #
+    #     return False
 
     def __str__(self):
         """
@@ -459,6 +485,18 @@ class Gene:
 
     def __repr__(self):
         return '({}, {}, {})'.format(self.direction, self.start, self.stop)
+
+
+class TRNA(GeneFeature):
+
+    def __init__(self, start, stop, direction, trna_type, identity=None):
+        super(TRNA, self).__init__(start, stop, direction)
+
+        self.type = trna_type
+        self.identity = identity
+
+    def __repr__(self):
+        return f'TRNA(start={self.start}, stop={self.stop}, direction={self.direction}, type={self.type}'
 
 
 class GeneUtils:
@@ -550,15 +588,25 @@ class GeneUtils:
         # build features
         features = []
         for ind, gene in enumerate(genes):
+            ind += 1
             direction = 1 if gene.direction == '+' else -1
             geneFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
                                                     type='gene',
                                                     qualifiers={'gene': ind},
                                                     strand=direction)
-            cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
-                                                   type='CDS',
-                                                   qualifiers={'gene': ind},
-                                                   strand=direction)
+            if isinstance(gene, Gene):
+                cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
+                                                       type='CDS',
+                                                       qualifiers={'gene': ind},
+                                                       strand=direction)
+            elif isinstance(gene, TRNA):
+                product = gene.type.split('(')[0]
+                cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
+                                                       type='TRNA',
+                                                       qualifiers={'gene': ind,
+                                                                   'note': gene.type,
+                                                                   'product': product},
+                                                       strand=direction)
             features.append(geneFeature)
             features.append(cdsFeature)
 
@@ -901,6 +949,16 @@ class GeneParse:
         """
         return MetagenePy.Metagene.parse(metagene_data, identity)
 
+    @staticmethod
+    def parse_aragorn(aragorn_data: str, identity: str = ''):
+        """
+        Parse Aragorn output
+        :param aragorn_data:
+        :param identity:
+        :return: List[TRNA]
+        """
+        return Aragorn.aragorn_parse(aragorn_data, id=identity)
+
 
 def write_gene(gene, row, ws, indexes):
     """
@@ -1085,6 +1143,4 @@ if __name__ == '__main__':
     for seq in SeqIO.parse(file, 'fasta'):
         Dissequence = seq
     gfile = GeneFile(file, 'Paenibacillus_larvae_subsp_ATCC_9545')
-    gfile.rastQuery(username='mlazeroff',
-                    password='chester')
     data = gfile.query_data['rast']
