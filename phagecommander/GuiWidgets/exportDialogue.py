@@ -3,7 +3,7 @@ from abc import abstractmethod
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-
+from phagecommander.Utilities.Tools import *
 
 class exportDialog(QDialog):
     """
@@ -32,7 +32,10 @@ class exportDialog(QDialog):
         # VARIABLES -----------------------------------------------------------------
         # currently selected radiobutton - defaults to ALL
         self.currentSelection = self._LESS_THAN_EQUAL_BUTTON_TEXT
-        self.toolCount = list(self.queryData.tools.values()).count(True)
+        self.toolCount = 0
+        for tool in self.queryData.tools:
+            if tool in GENE_TOOLS and self.queryData.tools[tool] is True:
+                self.toolCount += 1
         self.saveFileName = ''
 
         # WIDGETS ------------------------------------------------------------------

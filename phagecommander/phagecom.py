@@ -11,23 +11,9 @@ from Bio import SeqIO
 from phagecommander import Gene
 import phagecommander.GuiWidgets
 from phagecommander.Utilities import ThreadData, ProdigalRelease, Aragorn
+from phagecommander.Utilities.Tools import *
 
 APP_NAME = 'Phage Commander'
-
-# list of tool calls
-RAST = 'rast'
-METAGENE = 'metagene'
-ARAGORN = 'aragorn'
-GENEMARK = 'gm'
-HMM = 'hmm'
-HEURISTIC = 'heuristic'
-GENEMARKS = 'gms'
-GENEMARKS2 = 'gms2'
-GLIMMER = 'glimmer'
-PRODIGAL = 'prodigal'
-TOOL_NAMES = [GENEMARK, HMM, HEURISTIC, GENEMARKS, GENEMARKS2, GLIMMER, PRODIGAL, RAST, METAGENE, ARAGORN]
-GENE_TOOLS = [GENEMARK, HMM, HEURISTIC, GENEMARKS, GENEMARKS2, GLIMMER, PRODIGAL, RAST, METAGENE]
-TRNA_TOOLS = [ARAGORN]
 
 # mappings of tool names to appropriate methods
 # [queryMethod, parseMethod]
