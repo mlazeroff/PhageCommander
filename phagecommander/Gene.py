@@ -10,6 +10,7 @@ import time
 import os
 from typing import Callable, List
 from subprocess import Popen, PIPE
+import subprocess
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, colors
 import Bio.Seq
@@ -322,7 +323,7 @@ class GeneFile:
 
         # generate prodigal command and run
         cmd = '\"{}\" -i \"{}\" -p meta'.format(self.prodigalLocation, self.file_path)
-        proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+        proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True, stdin=subprocess.DEVNULL)
         stdout, stderr = proc.communicate()
 
         # check for error, exit if so
