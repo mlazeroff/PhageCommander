@@ -657,7 +657,7 @@ class QueryThread(QThread):
 
         # perform parsing of data
         try:
-            genes = parseMethod(self.geneFile.query_data[self.tool], identity=self.tool)
+            genes = parseMethod(self.geneFile.query_data[self.tool], len(self.queryData.sequence), identity=self.tool)
         except Exception as e:
             self.queryData.toolData[self.tool] = e
             return

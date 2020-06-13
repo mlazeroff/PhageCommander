@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 import json
 import time
 import os
-from typing import Callable, List
+from typing import Callable, List, Tuple
 from subprocess import Popen, PIPE
 import subprocess
 from openpyxl import Workbook
@@ -65,13 +65,9 @@ class GeneFile:
         Generates necessary parameters for post requests from DNA fasta file
         :param sequence_file:
         """
-        # Load DNA Sequence into memory
-        input_file_data = b''
+        # Load DNA Sequence
         with open(sequence_file, 'rb') as input_file:
-            current_byte = input_file.read(1)
-            while (current_byte):
-                input_file_data += current_byte
-                current_byte = input_file.read(1)
+            input_file_data = input_file.read()
 
         # full path
         self.file_path = sequence_file
@@ -377,7 +373,7 @@ class GeneError(Error):
 class GeneFeature:
     DIRECTIONS = {'+', '-'}
 
-    def __init__(self, start: int, stop: int, direction: str):
+    def __init__(self, start: int, stop: int, direction: str, seq_size: int = None):
         self.start = start
         self.stop = stop
 
@@ -385,7 +381,31 @@ class GeneFeature:
             raise TypeError(f'Invalid direction {direction}')
         self.direction = direction
 
-        self.length = stop - start + 1
+        if stop < start and seq_size is None:
+            raise ValueError('Stop codon is smaller than start. Must provide a sequence size')
+
+        if stop < start:
+            self.length = seq_size - start + stop + 1
+            self.joined = True
+        else:
+            self.length = stop - start + 1
+            self.joined = False
+
+    def get_features(self) -> List[Tuple[int, int]]:
+        """
+        Returns a list representing the feature of the gene
+        Joined genes return two tuples
+        :return: List[Tuple[int, int]]
+        """
+        features = []
+        if self.joined:
+            genome_end = self.length + self.start - self.stop - 1
+            features.append((self.start, genome_end))
+            features.append((1, self.stop))
+        else:
+            features.append((self.start, self.stop))
+
+        return features
 
     def __eq__(self, other):
 
@@ -408,13 +428,16 @@ class Gene(GeneFeature):
     Class for representing a potential gene encoding
     """
 
-    def __init__(self, start: str, stop: str, direction: str, identity=''):
+    def __init__(self, start: str, stop: str, direction: str, identity='', seq_size: int = None):
         """
         Constructor
         :param start:  start codon (str)
         :param stop:   end codon (str)
         :param direction: +/-
         :param identity: optional identifier
+        :param seq_size: the total size of the sequence - only used if a gene encoded beyond the end of the sequence
+            * the end of the sequence must be known to calculate the length
+            Ex: 15687 to 8
         """
         # check for "<3" or ">3" style starts, stops
         if '<' in start:
@@ -437,7 +460,7 @@ class Gene(GeneFeature):
 
         self.identity = identity
 
-        super(Gene, self).__init__(start, stop, direction)
+        super(Gene, self).__init__(start, stop, direction, seq_size=seq_size)
 
     def jsonDump(self):
 
@@ -590,24 +613,38 @@ class GeneUtils:
         for ind, gene in enumerate(genes):
             ind += 1
             direction = 1 if gene.direction == '+' else -1
-            geneFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
-                                                    type='gene',
-                                                    qualifiers={'gene': ind},
-                                                    strand=direction)
+
+            geneFeatures = gene.get_features()
+
+            if len(geneFeatures) == 1:
+                locFeature = Bio.SeqFeature.FeatureLocation(geneFeatures[0][0] - 1, geneFeatures[0][1])
+
+            # joined feature
+            else:
+                feat1 = Bio.SeqFeature.FeatureLocation(geneFeatures[0][0] - 1, geneFeatures[0][1])
+                feat2 = Bio.SeqFeature.FeatureLocation(geneFeatures[1][0] - 1, geneFeatures[1][1])
+                locFeature = Bio.SeqFeature.CompoundLocation([feat1, feat2])
+
+            seqFeat = Bio.SeqFeature.SeqFeature(locFeature,
+                                                type='gene',
+                                                qualifiers={'gene': ind},
+                                                strand=direction)
+
             if isinstance(gene, Gene):
-                cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
+                cdsFeature = Bio.SeqFeature.SeqFeature(locFeature,
                                                        type='CDS',
                                                        qualifiers={'gene': ind},
                                                        strand=direction)
             elif isinstance(gene, TRNA):
                 product = gene.type.split('(')[0]
-                cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
+                cdsFeature = Bio.SeqFeature.SeqFeature(locFeature,
                                                        type='TRNA',
                                                        qualifiers={'gene': ind,
                                                                    'note': gene.type,
                                                                    'product': product},
                                                        strand=direction)
-            features.append(geneFeature)
+
+            features.append(seqFeat)
             features.append(cdsFeature)
 
         # create genbank file from genes and write to file
@@ -667,10 +704,11 @@ class GeneParse:
     """
 
     @staticmethod
-    def parse_glimmer(glimmer_data, identity=''):
+    def parse_glimmer(glimmer_data, seq_size: int, identity='', ):
         """
         Parses the output of a glimmer query for gene predictions
         :param glimmer_data: string representing glimmer query output
+        :param seq_size: length of the sequence
         :param identity: optional identifier for each gene
         :return: list of Genes in numerical order
         """
@@ -684,19 +722,20 @@ class GeneParse:
                 data = [x for x in line.split(' ') if x != '']
                 # get gene direction and create Gene
                 if '+' in data[3]:
-                    genes.append(Gene(data[1], data[2], '+', identity=identity))
+                    genes.append(Gene(data[1], data[2], '+', identity=identity, seq_size=seq_size))
                 else:
-                    genes.append(Gene(data[2], data[1], '-', identity=identity))
+                    genes.append(Gene(data[2], data[1], '-', identity=identity, seq_size=seq_size))
 
         # return list of Genes
         return genes
 
     @staticmethod
-    def parse_genemark(gm_data, identity=''):
+    def parse_genemark(gm_data, seq_size: int, identity=''):
         """
         Parse GeneMark output file for Genes
         :param gm_file: GeneMark output file
         :param identity: optional identifier for each Gene
+        :param seq_size: length of the sequence
         :return: list of Genes in file order
         """
         gm_data = gm_data.splitlines()
@@ -723,18 +762,19 @@ class GeneParse:
                 start = data[2]
                 stop = data[3]
                 direction = data[1]
-                genes.append(Gene(start, stop, direction, identity=identity))
+                genes.append(Gene(start, stop, direction, identity=identity, seq_size=seq_size))
             else:
                 break
 
         return genes
 
     @staticmethod
-    def parse_genemarkS(gms_data, identity=''):
+    def parse_genemarkS(gms_data, seq_size: int, identity=''):
         """
         Parse GeneMarkS file for Gene data
-        :param s_file: GeneMarkS file
+        :param gmss_file: GeneMarkS file
         :param identity: optional identifier for each Gene
+        :param seq_size: length of the sequence
         :return: list of Genes in file order
         """
         gms_data = gms_data.splitlines()
@@ -763,16 +803,17 @@ class GeneParse:
         for current_line in gms_data:
             if current_line != '':
                 data = [x for x in current_line.strip().split(' ') if x != '']
-                genes.append(Gene(data[2], data[3], data[1], identity=identity))
+                genes.append(Gene(data[2], data[3], data[1], identity=identity, seq_size=seq_size))
 
         return genes
 
     @staticmethod
-    def parse_genemarkHmm(hmm_data, identity=''):
+    def parse_genemarkHmm(hmm_data, seq_size: int, identity=''):
         """
         Parse GeneMark Hmm file for Gene data
         :param hmm_file:
         :param identity: optional identifier for each Gene
+        :param seq_size: length of the sequence
         :return: list of Genes in file order
         """
         hmm_data = hmm_data.splitlines()
@@ -814,16 +855,17 @@ class GeneParse:
                         else:
                             data[2] = data[2][ind:]
 
-                genes.append(Gene(data[2], data[3], data[1], identity=identity))
+                genes.append(Gene(data[2], data[3], data[1], identity=identity, seq_size=seq_size))
 
         return genes
 
     @staticmethod
-    def parse_genemarkHeuristic(heuristic_data, identity=''):
+    def parse_genemarkHeuristic(heuristic_data, seq_size: int, identity=''):
         """
         Parse GeneMark Heuristic file for Gene data
         :param heuristic_file: GeneMark Heuristic output file
         :param identity: optional identifier for each Gene
+        :param seq_size: length of the sequence
         :return: list of Genes in order
         """
         heuristic_data = heuristic_data.splitlines()
@@ -851,16 +893,17 @@ class GeneParse:
         for current_line in heuristic_data:
             if current_line != '':
                 data = [x for x in current_line.strip().split(' ') if x != '']
-                genes.append(Gene(data[2], data[3], data[1], identity=identity))
+                genes.append(Gene(data[2], data[3], data[1], identity=identity, seq_size=seq_size))
 
         return genes
 
     @staticmethod
-    def parse_genemarkS2(gms2_data, identity=''):
+    def parse_genemarkS2(gms2_data, seq_size: int, identity=''):
         """
         Parse GeneMark S2 file for Gene data
         :param s2_file: GeneMark S2 output file
         :param identity: optional identifier for each Gene
+        :param seq_size: length of the sequence
         :return: list of Genes in file order
         """
         gms2_data = gms2_data.splitlines()
@@ -882,7 +925,7 @@ class GeneParse:
         for curr_line in gms2_data:
             if curr_line != '':
                 data = [x for x in curr_line.strip().split(' ') if x != '']
-                genes.append(Gene(data[2], data[3], data[1], identity=identity))
+                genes.append(Gene(data[2], data[3], data[1], identity=identity, seq_size=seq_size))
             # stop at newline after genes
             else:
                 break
@@ -890,10 +933,11 @@ class GeneParse:
         return genes
 
     @staticmethod
-    def parse_prodigal(prodigal_data, identity=''):
+    def parse_prodigal(prodigal_data, seq_size: int, identity=''):
         """
         Parse prodigal output file for Gene information
         :param prodigal_file: prodigal output file
+        :param seq_size: length of the sequence
         :param identity: optional identifier for Gene
         :return: list of Genes in file order
         """
@@ -915,15 +959,16 @@ class GeneParse:
                     start, end = gene_str.split('..')
                     # start, end = [int(x) for x in gene_str.split('.') if x.isnumeric()]
                     # create gene
-                    genes.append(Gene(start, end, direction, identity=identity))
+                    genes.append(Gene(start, end, direction, identity=identity, seq_size=seq_size))
 
         return genes
 
     @staticmethod
-    def parse_rast(rast_data, identity=''):
+    def parse_rast(rast_data, seq_size: int, identity=''):
         """
         Parse the gff3 formatted data for genes
         :param rast_data: gff3 formatted gene annotations
+        :param seq_size: length of the sequence
         :param identity: optional identity for genes
         :return: List[Gene]
         """
@@ -935,29 +980,30 @@ class GeneParse:
                 start = data[3]
                 stop = data[4]
                 direction = data[6]
-                genes.append(Gene(start, stop, direction, identity))
+                genes.append(Gene(start, stop, direction, identity=identity, seq_size=seq_size))
 
         return genes
 
     @staticmethod
-    def parse_metagene(metagene_data: str, identity: str = ''):
+    def parse_metagene(metagene_data: str, seq_size: int, identity: str = ''):
         """
         Parse a metagene output file for Genes
         :param metagene_data: output of Metagene tool
+        :param seq_size: length of the sequence
         :param identity: optional identity for gene
         :return: List[Gene]
         """
-        return MetagenePy.Metagene.parse(metagene_data, identity)
+        return MetagenePy.Metagene.parse(metagene_data, seq_size, identity)
 
     @staticmethod
-    def parse_aragorn(aragorn_data: str, identity: str = ''):
+    def parse_aragorn(aragorn_data: str, seq_size: int, identity: str = ''):
         """
         Parse Aragorn output
         :param aragorn_data:
         :param identity:
         :return: List[TRNA]
         """
-        return Aragorn.aragorn_parse(aragorn_data, id=identity)
+        return Aragorn.aragorn_parse(aragorn_data, seq_size, identity)
 
 
 def write_gene(gene, row, ws, indexes):

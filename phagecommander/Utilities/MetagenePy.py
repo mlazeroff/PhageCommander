@@ -23,10 +23,11 @@ class Metagene:
         return postReq.text
 
     @staticmethod
-    def parse(metageneData: str, identity: str = ''):
+    def parse(metageneData: str, seq_size: int, identity: str = ''):
         """
         Parse Metagene output data for Genes
-        :param metageneData: metagene output file content
+        :param metageneData: metagie output file content
+        :param seq_size: length of the sequence
         :param identity: identity for each gene
         :return: List[Gene]
         """
@@ -47,6 +48,6 @@ class Metagene:
             stop = geneLine[STOP].text
             direction = geneLine[DIRECTION].text
             # create gene
-            genes.append(Gene.Gene(start, stop, direction, identity=identity))
+            genes.append(Gene.Gene(start, stop, direction, identity=identity, seq_size=seq_size))
 
         return genes
