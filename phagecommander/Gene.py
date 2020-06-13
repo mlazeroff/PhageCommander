@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 import json
 import time
 import os
-from typing import Callable, List
+from typing import Callable, List, Tuple
 from subprocess import Popen, PIPE
 import subprocess
 from openpyxl import Workbook
@@ -385,9 +385,27 @@ class GeneFeature:
             raise ValueError('Stop codon is smaller than start. Must provide a sequence size')
 
         if stop < start:
-            self.length = seq_size - start + stop
+            self.length = seq_size - start + stop + 1
+            self.joined = True
         else:
             self.length = stop - start + 1
+            self.joined = False
+
+    def get_features(self) -> List[Tuple[int, int]]:
+        """
+        Returns a list representing the feature of the gene
+        Joined genes return two tuples
+        :return: List[Tuple[int, int]]
+        """
+        features = []
+        if self.joined:
+            genome_end = self.length + self.start - self.stop - 1
+            features.append((self.start, genome_end))
+            features.append((1, self.stop))
+        else:
+            features.append((self.start, self.stop))
+
+        return features
 
     def __eq__(self, other):
 
@@ -595,24 +613,38 @@ class GeneUtils:
         for ind, gene in enumerate(genes):
             ind += 1
             direction = 1 if gene.direction == '+' else -1
-            geneFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
-                                                    type='gene',
-                                                    qualifiers={'gene': ind},
-                                                    strand=direction)
+
+            geneFeatures = gene.get_features()
+
+            if len(geneFeatures) == 1:
+                locFeature = Bio.SeqFeature.FeatureLocation(geneFeatures[0][0] - 1, geneFeatures[0][1])
+
+            # joined feature
+            else:
+                feat1 = Bio.SeqFeature.FeatureLocation(geneFeatures[0][0] - 1, geneFeatures[0][1])
+                feat2 = Bio.SeqFeature.FeatureLocation(geneFeatures[1][0] - 1, geneFeatures[1][1])
+                locFeature = Bio.SeqFeature.CompoundLocation([feat1, feat2])
+
+            seqFeat = Bio.SeqFeature.SeqFeature(locFeature,
+                                                type='gene',
+                                                qualifiers={'gene': ind},
+                                                strand=direction)
+
             if isinstance(gene, Gene):
-                cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
+                cdsFeature = Bio.SeqFeature.SeqFeature(locFeature,
                                                        type='CDS',
                                                        qualifiers={'gene': ind},
                                                        strand=direction)
             elif isinstance(gene, TRNA):
                 product = gene.type.split('(')[0]
-                cdsFeature = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(gene.start - 1, gene.stop),
+                cdsFeature = Bio.SeqFeature.SeqFeature(locFeature,
                                                        type='TRNA',
                                                        qualifiers={'gene': ind,
                                                                    'note': gene.type,
                                                                    'product': product},
                                                        strand=direction)
-            features.append(geneFeature)
+
+            features.append(seqFeat)
             features.append(cdsFeature)
 
         # create genbank file from genes and write to file
