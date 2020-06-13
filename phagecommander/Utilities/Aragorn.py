@@ -58,7 +58,13 @@ def aragorn_query(file_path: str, rna_type: str = 'tRNA', use_introns: bool = Fa
     return file_post.content
 
 
-def aragorn_parse(aragorn_data: str, id=None):
+def aragorn_parse(aragorn_data: str, seq_size: int, id=None):
+    """
+    :param aragorn_data:
+    :param seq_size:
+    :param id:
+    :return:
+    """
     soup = BeautifulSoup(aragorn_data, 'html.parser')
     trnas = soup.find('pre')
 
